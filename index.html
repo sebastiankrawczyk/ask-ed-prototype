@@ -485,11 +485,12 @@ body.tasks-float .list-scroll{padding-bottom:230px}
       <div id="cats"></div>
     </div>
 <div class="tasks" id="tasks">
-      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/2</span></button>
+      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/3</span></button>
       <div class="thint">Test tasks: they tick off by themselves.</div>
       <ol id="taskList">
         <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Find out what you missed.</li>
-        <li data-t="quiz"><span class="bx">✓</span>You have a question about Quiz 4. Get an answer you can trust.</li>
+        <li data-t="quiz"><span class="bx">✓</span>You have a question about Quiz 4. Get an answer.</li>
+        <li data-t="source"><span class="bx">✓</span>Find the source of that answer.</li>
       </ol>
       <div class="tres" id="taskRes" hidden><b id="taskResTxt"></b><button id="copyRes">Copy result</button><span>Paste it into the survey.</span></div>
       <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="reset">Reset prototype</button></div>
@@ -2540,6 +2541,7 @@ async function ask(text, key){
   setTimeout(()=>{ const pv = m.previousElementSibling; if(m.isConnected && pv) pv.scrollIntoView({block:"start",behavior:"smooth"}); }, 60);
   if(S.after) S.after();
   if(key==="missed") doneTask("missed");
+  if(key==="materials" || key==="scope") doneTask("quiz");
   state.busy = false; updateSend();
 }
 
@@ -2689,7 +2691,7 @@ function checkTasks(kind, id){
   if(kind==="d") state.seenDocs.add(id);
   const S = state.seen, D = state.seenDocs;
   // Quiz 4 question: opened a source behind a Quiz 4 answer (study threads or course pages); links in the "what you missed" summary don't count here
-  if(!state.viaMissed && ((kind==="t" && [2847,2812,2805].includes(id)) || (kind==="d" && ["quiz4","syllabus","schedule"].includes(id)))) doneTask("quiz");
+  if(!state.viaMissed && ((kind==="t" && [2847,2812,2805].includes(id)) || (kind==="d" && ["quiz4","syllabus","schedule"].includes(id)))){ doneTask("quiz"); doneTask("source"); }
   // what you missed: seeing the summary (Ask Ed) ticks it; without Ask Ed, opening 2 of the posts that came in while away
   if(MISSED_IDS.filter(x=>S.has(x)).length>=2) doneTask("missed");
 }
