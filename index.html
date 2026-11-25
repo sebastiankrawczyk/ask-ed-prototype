@@ -190,6 +190,10 @@ header{height:46px;flex:none;background:var(--purple);color:#fff;display:flex;al
 .sugg-l{font-size:10px;font-weight:700;color:#888;letter-spacing:.4px;margin:4px 0 8px}
 .sugg{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;transition:border-color .15s,background .15s}
 .sugg:hover{border-color:var(--purple-line);background:#fcfaff}
+.sugg.flash{animation:suggflash 1.2s ease 1}
+@keyframes suggflash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 3px rgba(80,40,140,.25);border-color:var(--purple)}}
+#ci[readonly]{cursor:pointer;color:#777}
+#send[hidden]{display:none}
 .sugg .si{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;flex:none;background:#f3f3f3;color:#555}
 .sugg b{display:block;font-size:12.5px;font-weight:600;color:#222}
 .sugg span{font-size:11px;color:#888}
@@ -525,11 +529,11 @@ button.likecol{cursor:pointer}
     <div class="composer">
       <div class="dup" id="dup" hidden></div>
       <div class="cbox">
-        <textarea id="ci" placeholder="Ask about threads, quizzes, deadlines…" aria-label="Ask Ed a question"></textarea>
+        <textarea id="ci" readonly placeholder="Here you would type your own question. In this prototype, pick one under Try asking." aria-label="Typing is off in this prototype. Pick a question under Try asking."></textarea>
         <div class="crow">
           <span class="scopetxt">CS6750 only</span>
           <div class="sp"></div>
-          <button class="send" id="send" disabled aria-label="Send"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5 21 12 3 3.5l2.5 7L15 12l-9.5 1.5z"/></svg></button>
+          <button class="send" id="send" disabled hidden aria-label="Send"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5 21 12 3 3.5l2.5 7L15 12l-9.5 1.5z"/></svg></button>
         </div>
       </div>
       <div class="disc">Answers are generated from Ed threads and course pages and always link their sources. Check them before relying on them.</div>
@@ -2114,7 +2118,7 @@ const SUGG = [
   {k:"scope",     icon:ICON.doc,  q:"What's the scope of Quiz 4?",                             d:"Answers from the syllabus and quiz page"},
   {k:"cluster",   icon:ICON.cluster, q:"Has anyone asked if optional readings are on the quiz?", d:"Groups every thread asking the same thing"},
   {k:"missed",    icon:ICON.clock, q:"What did I miss since my last visit?",                  d:"Short summary of new posts and answers"},
-  {k:"curve",     icon:ICON.doc,   q:"Will Quiz 4 be curved?",                                d:"A question with no official answer"}
+  {k:"curve",     icon:ICON.doc,   q:"Will Quiz 4 be curved?",                                d:"Example where Ed finds no official answer"}
 ];
 /* Ask Ed navigation: home screen <-> conversations; conversations are kept in "Recent". */
 function saveConv(){
@@ -2157,9 +2161,7 @@ function updateCounts(){
 }
 function welcome(){
   const rec = state.history.length ? `<div class="recent"><div class="sugg-l">YOUR RECENT QUESTIONS</div>${state.history.map((h,i)=>{const n=(h.html.match(/class="msg-u"/g)||[]).length;return `<button class="rec" data-conv="${i}">${ICON.clock}<span class="x">${esc(h.title)}</span><span class="m">${n>1?n+" questions":"1 question"}</span></button>`}).join("")}</div>` : "";
-  const tryAsk = STUDY
-    ? `<div class="sugg-l" style="margin-top:16px">ASK IN YOUR OWN WORDS</div><div class="hints">Ask Ed can find threads, check course rules on official pages, group questions that were already asked, and summarise what you missed.</div>`
-    : `<div class="sugg-l" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>s.k!=="missed" && s.k!=="curve").map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
+  const tryAsk = `<div class="sugg-l" id="tryAsk" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>s.k!=="missed").map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
   $("#chatScroll").innerHTML = `<div class="welcome">
     <div class="big">${ICON.spark.replace('width="11" height="11"','width="20" height="20"')}</div>
     <h2>Ask anything about CS6750</h2>
@@ -2521,7 +2523,7 @@ async function ask(text, key){
     ${S.method?`<div class="method">${ICON.spark}<span>Ranked with embeddings and retrieval-augmented generation (RAG). Summaries are AI-generated; the approval badge comes from course staff.</span></div>`:""}
     ${S.collapse?`<details class="srcd"><summary>Show source details (${S.sources.length})</summary>${cards}</details>`:cards}`:"") + `
     <div class="fb"><button class="ib" data-fb="up" title="Helpful" aria-label="Helpful">${ICON.up}</button><button class="ib" data-fb="down" title="Not helpful" aria-label="Not helpful">${ICON.down}</button><button class="ib" data-copy title="Copy answer and sources" aria-label="Copy answer and sources">${ICON.copy}</button></div>
-    ${STUDY?"":`<div class="follow">${chipsHTML(S.follow)}</div>`}`;
+    <div class="follow">${chipsHTML(S.follow)}</div>`;
   m.appendChild(src);
   // Nudge: the first citation and source card pulse once; a one-time tip explains the numbers.
   const c1 = ans.querySelector(".cite"); if(c1) c1.classList.add("nudge");
@@ -2622,6 +2624,14 @@ $("#dup").addEventListener("click", e => {
   openSource("t:"+id+(id===2783?":opt1":""), null, "dup");
 });
 $("#send").addEventListener("click", () => { if(state.busy){ log("stop",{}); cancelRun(); } else send(); });
+/* Typing is off for the evaluation: the box only points people to the Try asking questions. */
+ci.addEventListener("click", () => {
+  if(state.busy) return;
+  if(state.view!=="home") goHome();
+  const t = $("#tryAsk"); if(t) t.scrollIntoView({block:"start", behavior:"smooth"});
+  document.querySelectorAll("#chatScroll .sugg").forEach(b=>{ b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); });
+  log("typing_blocked");
+});
 function send(){ const v = ci.value.trim(); if(!v) return; ci.value=""; hideDups(); updateSend(); ask(v); }
 $("#newChat").addEventListener("click", () => { goHome(); ci.focus(); });
 $("#chatBack").addEventListener("click", goHome);
