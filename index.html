@@ -439,6 +439,7 @@ button.likecol{cursor:pointer}
 @media (max-width:1180px){.list{width:240px}.side{width:150px}:root{--chat-w:380px}}
 @media (max-width:980px){.side{display:none}}
 @media (max-width:1100px){.app:not(.chat-off) .side{display:none}}
+body.tasks-float .list-scroll{padding-bottom:230px}
 .tasks.float{position:fixed;left:10px;bottom:30px;width:236px;z-index:25;margin:0;box-shadow:0 6px 24px rgba(60,30,110,.18)}
 @media (max-width:760px){
   .list{display:none} .htitle,.inst{display:none}
@@ -484,14 +485,13 @@ button.likecol{cursor:pointer}
       <div id="cats"></div>
     </div>
 <div class="tasks" id="tasks">
-      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/5</span></button>
+      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/4</span></button>
       <div class="thint">Test tasks: they tick off by themselves.</div>
       <ol id="taskList">
         <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Get back up to speed.</li>
         <li data-t="materials"><span class="bx">✓</span>Find good material to study for Quiz 4.</li>
         <li data-t="scope"><span class="bx">✓</span>Find out for sure what Quiz 4 covers.</li>
         <li data-t="cluster"><span class="bx">✓</span>Find out if optional readings are on Quiz 4, and whether someone already asked.</li>
-        <li data-t="curve"><span class="bx">✓</span>Decide if you can count on Quiz 4 being curved.</li>
       </ol>
       <div class="tres" id="taskRes" hidden><b id="taskResTxt"></b><button id="copyRes">Copy result</button><span>Paste it into the survey.</span></div>
       <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="reset">Reset prototype</button></div>
@@ -1865,7 +1865,7 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ===================== STATE ===================== */
-const state = { cat:null, q:"", showMore:false, open:null, read:new Set(), seen:new Set(), busy:false, tasks:new Set(), view:"home", history:[], cur:null, gen:0,
+const state = { cat:null, q:"", showMore:false, open:null, read:new Set(), seen:new Set(), seenDocs:new Set(), asked:new Set(), busy:false, tasks:new Set(), view:"home", history:[], cur:null, gen:0,
   filter:null, ret:null, retDraft:null, paneRef:null, star:new Set(), watch:new Set(), liked:new Set(), linked:false, notified:false, daily:false,
   marked:[], draft:null, fast:false, nudged:false, pseq:null, lastKey:null, dupIdx:-1, pid:"" };
 /* URL flags for evaluation sessions: ?study=1 hides suggested questions, ?panel=closed starts collapsed, ?ask=off = plain-Ed baseline */
@@ -1906,7 +1906,14 @@ function passFilter(t){
   if(f==="unread") return !state.read.has(t.id);
   return true;
 }
-const matchesQ = (t,q) => !q || (t.title+" "+t.cat).toLowerCase().includes(q.toLowerCase());
+/* List search: exact text in title/category, else every query word (stemmed, with course synonyms) appears in title or post body. */
+const matchesQ = (t,q) => {
+  if(!q) return true;
+  if((t.title+" "+t.cat).toLowerCase().includes(q.toLowerCase())) return true;
+  try{ const qt = toks(q); if(!qt.length) return false;
+    if(!t._tk) t._tk = new Set(toks(t.title+" "+plain(t.body||"")));
+    return qt.every(w=>t._tk.has(w)); }catch(e){ return false; }
+};
 function filteredThreads(){ const q = state.q.trim(); return THREADS.filter(t => (!state.cat || t.cat===state.cat) && matchesQ(t,q) && passFilter(t)); }
 const FILTERS = {staff:"Staff answered", none:"Unanswered", unread:"Unread"};
 const BRIDGE = {weekly:"the pinned weekly threads", materials:"3 student threads", scope:"the Quiz 4 page and Syllabus", cluster:"3 matching threads and the Syllabus", missed:"your updates since Friday", curve:"course pages (no official answer exists)", clarify:"after checking what you mean"};
@@ -2161,7 +2168,7 @@ function updateCounts(){
 }
 function welcome(){
   const rec = state.history.length ? `<div class="recent"><div class="sugg-l">YOUR RECENT QUESTIONS</div>${state.history.map((h,i)=>{const n=(h.html.match(/class="msg-u"/g)||[]).length;return `<button class="rec" data-conv="${i}">${ICON.clock}<span class="x">${esc(h.title)}</span><span class="m">${n>1?n+" questions":"1 question"}</span></button>`}).join("")}</div>` : "";
-  const tryAsk = `<div class="sugg-l" id="tryAsk" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>s.k!=="missed" && s.k!=="weekly").map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
+  const tryAsk = `<div class="sugg-l" id="tryAsk" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>s.k!=="missed" && s.k!=="weekly" && s.k!=="curve").map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
   $("#chatScroll").innerHTML = `<div class="welcome">
     <div class="big">${ICON.spark.replace('width="11" height="11"','width="20" height="20"')}</div>
     <h2>Ask anything about CS6750</h2>
@@ -2184,8 +2191,7 @@ $("#chatScroll").addEventListener("click", e => {
     $("#chatScroll").querySelectorAll(".active").forEach(x=>x.classList.remove("active"));
     c.classList.add("active","visited");
     const via = viaOf(c);
-    state.viaMissed = (via==="digest" || via==="home-missed");  // a "what you missed" link counts only toward catching up
-    openSource(c.dataset.open, c, via); state.viaMissed = false; return;
+    openSource(c.dataset.open, c, via); return;
   }
   const st = g(".steps-t"); if(st){ st.parentElement.classList.toggle("open"); return; }
   const fb = g("[data-fb]"); if(fb){
@@ -2277,7 +2283,7 @@ const SCRIPTS = {
    {ref:"t:2812:anki1",cat:"Lectures",title:byId[2812].title,score:.88,badge:"ok",sum:"A ~120-card Anki deck covering the Lessons 3.7–4.1 readings; each card cites its page. A TA spot-checked 30 cards.",meta:"Ben Smith · Nov 12 · "+byId[2812].com+" comments · 15 ♥"},
    {ref:"t:2805:notion1",cat:"Class Discussion",title:byId[2805].title,score:.64,badge:"no",sum:"Whole-course notes in Notion. Units 1–3 are finished; Unit 4 is in progress and may be out of date.",meta:"Carla Smith · Nov 11 · "+byId[2805].com+" comments"}
   ],
-  follow:["scope","curve"]
+  follow:["scope","cluster"]
  },
  scope: {
   steps:[["This is a <b>course rule</b> question, so I checked official course pages before student posts", 280],
@@ -2428,7 +2434,7 @@ $("#chatScroll").addEventListener("click", e => {
     toast(state.notified ? "Selma Smith (#2826) and Diego Smith (#2799) were pointed to the staff answer." : "Undone.");
     if(state.open===2799 || state.open===2826) openThread(state.open); return;
   }
-  if(act==="draft"){ const q = a.dataset.q||""; if(/curv/i.test(q)) doneTask("curve"); openCompose({title:q, cat:a.dataset.cat}); return; }
+  if(act==="draft"){ const q = a.dataset.q||""; openCompose({title:q, cat:a.dataset.cat}); return; }
 });
 
 /* Routing typed questions to the scripted answers (with a small alias/typo table). Other quiz numbers are not scripted. */
@@ -2470,7 +2476,7 @@ async function ask(text, key){
   const typed = !key;
   state.busy = true; state.fast = false; updateSend();
   key = key || route(text);
-  state.lastKey = key;
+  state.lastKey = key; if(key) state.asked.add(key);
   log("ask",{q:text, routed:key||"none", typed});
   const sc = $("#chatScroll");
   if(state.view==="home"){ sc.innerHTML = ""; state.view = "chat"; state.cur = null; }
@@ -2569,7 +2575,7 @@ ci.addEventListener("keydown", e => {
    Handles assignment numbers ("Quiz 4"), a few course synonyms and one-letter typos. */
 let dupT;
 const STOP = new Set("a an the is are was were be been do does did on in at of for to and or but if it its this that these those i me my we our you your can could should would will any anyone someone has have had about with from as by what whats when where which who how why there their they them just still also".split(" "));
-const SYN = {guide:"notes", pack:"notes", summaries:"notes", summary:"notes", anki:"flashcards", deck:"flashcards", flashcard:"flashcards", cards:"flashcards", extra:"optional", due:"deadline", appendices:"appendix", appendixes:"appendix", curved:"curve", curving:"curve"};
+const SYN = {guide:"notes", pack:"notes", summaries:"notes", summary:"notes", anki:"flashcards", deck:"flashcards", flashcard:"flashcards", cards:"flashcards", extra:"optional", due:"deadline", appendices:"appendix", appendixes:"appendix", curved:"curve", curving:"curve", readings:"reading", material:"notes", materials:"notes", prepping:"study", prep:"study", studying:"study"};
 const stem = w => w.replace(/'s$/,"").replace(/(ing|ed|es|s)$/,"");
 const rawToks = str => (str.toLowerCase().replace(/<[^>]+>/g," ").replace(/\bquizz\b/g,"quiz").replace(/\b(quiz|unit|lesson)\s+(\d)/g,"$1$2").replace(/\bq(\d)\b/g,"quiz$1").match(/[a-z0-9]+/g)||[]);
 const toks = str => rawToks(str).map(w=>SYN[w]||w).filter(w=>(w.length>2 || /[a-z]\d/.test(w)) && !STOP.has(w)).map(stem);
@@ -2680,23 +2686,23 @@ function showResult(){
   log("finished",{result:r});
 }
 function checkTasks(kind, id){
-  if(kind==="t"){
-    if([2849,2845,2838,2829,2820].includes(id)) doneTask("weekly");
-    if([2847,2812,2805].includes(id) && !state.viaMissed) doneTask("materials");
-    if(id===2783 || id===2799 || id===2826) doneTask("cluster");
-    if(id===2830) doneTask("curve");
-    /* caught up = opened at least 2 of the posts that came in while away (digest, home card or thread list) */
-    if(MISSED_IDS.filter(x=>state.seen.has(x)).length>=2) doneTask("missed");
-  }
-  if(kind==="d"){
-    if(id==="quiz4" || (id==="syllabus" && state.lastKey==="scope")) doneTask("scope");
-    if(id==="syllabus" && state.lastKey==="curve") doneTask("curve");
-  }
+  if(kind==="d") state.seenDocs.add(id);
+  const S = state.seen, D = state.seenDocs;
+  // materials: the staff-endorsed study pack or Anki deck (the Notion notes are the flagged, unfinished option)
+  if(S.has(2847) || S.has(2812)) doneTask("materials");
+  // scope: only the official Quiz 4 page says what Quiz 4 covers
+  if(D.has("quiz4")) doneTask("scope");
+  // optional readings: the staff-answered thread, or an earlier ask of the question plus the official answer
+  // (the Syllabus/Quiz 4 page, or Ask Ed's optional-readings answer, which quotes the Syllabus), in any order
+  if(S.has(2783) || ((S.has(2799) || S.has(2826)) && (D.has("syllabus") || D.has("quiz4") || state.asked.has("cluster")))) doneTask("cluster");
+  // caught up: opened 2 of the posts that came in while away (the study pack counts for materials instead)
+  if(MISSED_IDS.filter(x=>x!==2847 && S.has(x)).length>=2) doneTask("missed");
 }
 /* The task list lives in the sidebar; when the sidebar is hidden (narrow windows) it floats bottom-left. */
 function placeTasks(){
   const side = $(".side"), tasks = $("#tasks");
   const hidden = getComputedStyle(side).display==="none";
+  document.body.classList.toggle("tasks-float", hidden);
   if(hidden && !tasks.classList.contains("float")){ document.body.appendChild(tasks); tasks.classList.add("float"); if(window.innerWidth<=760) tasks.classList.add("min"); }
   else if(!hidden && tasks.classList.contains("float")){ side.insertBefore(tasks, $(".online")); tasks.classList.remove("float"); }
 }
@@ -2714,7 +2720,7 @@ $("#reset").addEventListener("click", () => {
   cancelRun();
   Object.assign(state, {cat:null, q:"", showMore:false, open:null, filter:null, ret:null, retDraft:null, paneRef:null, linked:false, notified:false, daily:false,
     marked:[], draft:null, nudged:false, pseq:null, lastKey:null, pid:"", history:[], view:"home", cur:null});
-  [state.read, state.seen, state.star, state.watch, state.liked].forEach(x=>x.clear());
+  [state.read, state.seen, state.seenDocs, state.asked, state.star, state.watch, state.liked].forEach(x=>x.clear());
   $("#q").value=""; LOG = []; T0 = Date.now();
   renderCats(); renderList(); emptyPane(); welcome(); setHeader(); updateCounts();
   if(!ASK_OFF){ if(PANEL_CLOSED){ if(!$("#app").classList.contains("chat-off")) toggleChat(); } else openChat(); }
