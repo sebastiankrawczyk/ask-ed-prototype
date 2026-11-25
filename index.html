@@ -485,12 +485,11 @@ body.tasks-float .list-scroll{padding-bottom:230px}
       <div id="cats"></div>
     </div>
 <div class="tasks" id="tasks">
-      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/3</span></button>
+      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/2</span></button>
       <div class="thint">Test tasks: they tick off by themselves.</div>
       <ol id="taskList">
-        <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Get back up to speed.</li>
-        <li data-t="materials"><span class="bx">✓</span>Find good material to study for Quiz 4.</li>
-        <li data-t="scope"><span class="bx">✓</span>Find out for sure what Quiz 4 covers.</li>
+        <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Find out what you missed.</li>
+        <li data-t="quiz"><span class="bx">✓</span>You have a question about Quiz 4. Get an answer you can trust.</li>
       </ol>
       <div class="tres" id="taskRes" hidden><b id="taskResTxt"></b><button id="copyRes">Copy result</button><span>Paste it into the survey.</span></div>
       <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="reset">Reset prototype</button></div>
@@ -2190,7 +2189,8 @@ $("#chatScroll").addEventListener("click", e => {
     $("#chatScroll").querySelectorAll(".active").forEach(x=>x.classList.remove("active"));
     c.classList.add("active","visited");
     const via = viaOf(c);
-    openSource(c.dataset.open, c, via); return;
+    state.viaMissed = (via==="digest" || via==="home-missed");
+    openSource(c.dataset.open, c, via); state.viaMissed = false; return;
   }
   const st = g(".steps-t"); if(st){ st.parentElement.classList.toggle("open"); return; }
   const fb = g("[data-fb]"); if(fb){
@@ -2539,6 +2539,7 @@ async function ask(text, key){
   // keep the user's message + start of the answer in view
   setTimeout(()=>{ const pv = m.previousElementSibling; if(m.isConnected && pv) pv.scrollIntoView({block:"start",behavior:"smooth"}); }, 60);
   if(S.after) S.after();
+  if(key==="missed") doneTask("missed");
   state.busy = false; updateSend();
 }
 
@@ -2687,15 +2688,10 @@ function showResult(){
 function checkTasks(kind, id){
   if(kind==="d") state.seenDocs.add(id);
   const S = state.seen, D = state.seenDocs;
-  // materials: the staff-endorsed study pack or Anki deck (the Notion notes are the flagged, unfinished option)
-  if(S.has(2847) || S.has(2812)) doneTask("materials");
-  // scope: only the official Quiz 4 page says what Quiz 4 covers
-  if(D.has("quiz4")) doneTask("scope");
-  // optional readings: the staff-answered thread, or an earlier ask of the question plus the official answer
-  // (the Syllabus/Quiz 4 page, or Ask Ed's optional-readings answer, which quotes the Syllabus), in any order
-  if(S.has(2783) || ((S.has(2799) || S.has(2826)) && (D.has("syllabus") || D.has("quiz4") || state.asked.has("cluster")))) doneTask("cluster");
-  // caught up: opened 2 of the posts that came in while away (the study pack counts for materials instead)
-  if(MISSED_IDS.filter(x=>x!==2847 && S.has(x)).length>=2) doneTask("missed");
+  // Quiz 4 question: opened a source behind a Quiz 4 answer (study threads or course pages); links in the "what you missed" summary don't count here
+  if(!state.viaMissed && ((kind==="t" && [2847,2812,2805].includes(id)) || (kind==="d" && ["quiz4","syllabus","schedule"].includes(id)))) doneTask("quiz");
+  // what you missed: seeing the summary (Ask Ed) ticks it; without Ask Ed, opening 2 of the posts that came in while away
+  if(MISSED_IDS.filter(x=>S.has(x)).length>=2) doneTask("missed");
 }
 /* The task list lives in the sidebar; when the sidebar is hidden (narrow windows) it floats bottom-left. */
 function placeTasks(){
