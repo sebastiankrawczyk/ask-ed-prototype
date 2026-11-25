@@ -485,13 +485,12 @@ body.tasks-float .list-scroll{padding-bottom:230px}
       <div id="cats"></div>
     </div>
 <div class="tasks" id="tasks">
-      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/4</span></button>
+      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/3</span></button>
       <div class="thint">Test tasks: they tick off by themselves.</div>
       <ol id="taskList">
         <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Get back up to speed.</li>
         <li data-t="materials"><span class="bx">✓</span>Find good material to study for Quiz 4.</li>
         <li data-t="scope"><span class="bx">✓</span>Find out for sure what Quiz 4 covers.</li>
-        <li data-t="cluster"><span class="bx">✓</span>Find out if optional readings are on Quiz 4, and whether someone already asked.</li>
       </ol>
       <div class="tres" id="taskRes" hidden><b id="taskResTxt"></b><button id="copyRes">Copy result</button><span>Paste it into the survey.</span></div>
       <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="reset">Reset prototype</button></div>
@@ -2168,7 +2167,7 @@ function updateCounts(){
 }
 function welcome(){
   const rec = state.history.length ? `<div class="recent"><div class="sugg-l">YOUR RECENT QUESTIONS</div>${state.history.map((h,i)=>{const n=(h.html.match(/class="msg-u"/g)||[]).length;return `<button class="rec" data-conv="${i}">${ICON.clock}<span class="x">${esc(h.title)}</span><span class="m">${n>1?n+" questions":"1 question"}</span></button>`}).join("")}</div>` : "";
-  const tryAsk = `<div class="sugg-l" id="tryAsk" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>s.k!=="missed" && s.k!=="weekly" && s.k!=="curve").map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
+  const tryAsk = `<div class="sugg-l" id="tryAsk" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>!["missed","weekly","curve","cluster"].includes(s.k)).map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
   $("#chatScroll").innerHTML = `<div class="welcome">
     <div class="big">${ICON.spark.replace('width="11" height="11"','width="20" height="20"')}</div>
     <h2>Ask anything about CS6750</h2>
@@ -2283,7 +2282,7 @@ const SCRIPTS = {
    {ref:"t:2812:anki1",cat:"Lectures",title:byId[2812].title,score:.88,badge:"ok",sum:"A ~120-card Anki deck covering the Lessons 3.7–4.1 readings; each card cites its page. A TA spot-checked 30 cards.",meta:"Ben Smith · Nov 12 · "+byId[2812].com+" comments · 15 ♥"},
    {ref:"t:2805:notion1",cat:"Class Discussion",title:byId[2805].title,score:.64,badge:"no",sum:"Whole-course notes in Notion. Units 1–3 are finished; Unit 4 is in progress and may be out of date.",meta:"Carla Smith · Nov 11 · "+byId[2805].com+" comments"}
   ],
-  follow:["scope","cluster"]
+  follow:["scope","missed"]
  },
  scope: {
   steps:[["This is a <b>course rule</b> question, so I checked official course pages before student posts", 280],
@@ -2306,7 +2305,7 @@ const SCRIPTS = {
    {ref:"d:syllabus:syl1",course:true,title:"Syllabus: Quizzes",score:.86,badge:"course",sum:"Course-wide quiz rules: only required readings are quizzed; open-notes, timed, one attempt, no collaboration.",meta:"Canvas › Syllabus · updated Aug 17"},
    {ref:"d:schedule:sch1",course:true,title:"Course Schedule: Weeks 14–15",score:.71,badge:"course",sum:"Places the Quiz 4 window in Week 14 (Nov 30 – Dec 6).",meta:"Canvas › Schedule · updated Nov 2"}
   ],
-  follow:["cluster","materials"]
+  follow:["materials","missed"]
  },
  cluster: {
   steps:[["Compared your question with what every thread asks, not only its title <span class=\"tech\">embeddings</span>", 260],
@@ -2354,7 +2353,7 @@ const SCRIPTS = {
   answer(){ return `<div class="ranges">${RANGES.map((r,i)=>`<button data-range="${i}" class="${i===0?"on":""}">${r.l}</button>`).join("")}</div><div class="digest">${digestHTML(0)}</div>
     <div class="dg-foot"><button data-act="markread">Mark these as read</button><span style="color:#999">·</span><button data-act="daily">${state.daily?"✓ Daily summary on · Turn off":"Get this every morning"}</button></div>`; },
   sources:[],
-  follow:["cluster","materials"]
+  follow:["materials","scope"]
  }
 };
 /* Quiz 4 closes Sun Dec 6, 11:59 pm AoE (UTC-12) = Mon Dec 7, 11:59 UTC. Shown in the viewer's real time zone. */
