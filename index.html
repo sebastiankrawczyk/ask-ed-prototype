@@ -494,7 +494,7 @@ button.likecol{cursor:pointer}
         <li data-t="curve"><span class="bx">✓</span>Decide if you can count on Quiz 4 being curved.</li>
       </ol>
       <div class="tres" id="taskRes" hidden><b id="taskResTxt"></b><button id="copyRes">Copy result</button><span>Paste it into the survey.</span></div>
-      <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="dlLog" title="Saves a JSON file on this computer: participant code, task results, and a timed list of clicks and typed questions or post titles. Nothing is sent anywhere.">Download log</button><button id="reset">Reset prototype</button></div>
+      <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="reset">Reset prototype</button></div>
     </div>
     <div class="online"><i></i>79 others online</div>
   </aside>
@@ -1871,7 +1871,7 @@ const state = { cat:null, q:"", showMore:false, open:null, read:new Set(), seen:
 /* URL flags for evaluation sessions: ?study=1 hides suggested questions, ?panel=closed starts collapsed, ?ask=off = plain-Ed baseline */
 const FLAGS = new URLSearchParams(location.search);
 const STUDY = FLAGS.get("study")==="1", PANEL_CLOSED = FLAGS.get("panel")==="closed", ASK_OFF = FLAGS.get("ask")==="off";
-/* Session log (kept in memory; "Download log" in the task card saves it as JSON) */
+/* Event log kept in memory only (no download in this version) */
 let LOG = [], T0 = Date.now();
 function log(type, data){ LOG.push(Object.assign({t:+((Date.now()-T0)/1000).toFixed(1), type}, data||{})); }
 
@@ -2708,16 +2708,6 @@ $("#copyRes").addEventListener("click", () => {
   const ok = () => toast("Copied: "+t), fb = () => { const x=document.createElement("textarea"); x.value=t; document.body.appendChild(x); x.select(); try{document.execCommand("copy");}catch(e){} x.remove(); ok(); };
   (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(t).then(ok, fb) : fb();
 });
-$("#dlLog").addEventListener("click", () => {
-  if(!state.pid){ const code = prompt("Participant code for this session (e.g. P03):", ""); if(code===null) return; state.pid = code.trim(); }
-  const data = {participant: state.pid || "anonymous", started: new Date(T0).toISOString(), saved: new Date().toISOString(),
-    flags: {study:STUDY, panelClosed:PANEL_CLOSED, askOff:ASK_OFF}, tasksDone: [...state.tasks], result: resultText(), events: LOG};
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:"application/json"}));
-  a.download = `ask-ed-session-${(state.pid||"anonymous").replace(/[^\w-]+/g,"_")}.json`;
-  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
-  toast(`Session log saved (${LOG.length} events).`);
-});
 $("#reset").addEventListener("click", () => {
   state.tasks.clear(); document.querySelectorAll("#taskList li").forEach(l=>l.classList.remove("done")); $("#taskCt").textContent="0/"+TASK_N; $("#taskRes").hidden=true; state.result=null; hideDups();
   cancelRun();
@@ -2728,7 +2718,7 @@ $("#reset").addEventListener("click", () => {
   renderCats(); renderList(); emptyPane(); welcome(); setHeader(); updateCounts();
   if(!ASK_OFF){ if(PANEL_CLOSED){ if(!$("#app").classList.contains("chat-off")) toggleChat(); } else openChat(); }
   document.documentElement.style.removeProperty("--chat-w");
-  toast("Prototype reset. The session log was cleared too.");
+  toast("Prototype reset.");
 });
 $("#newThread").addEventListener("click", () => { log("new_thread",{}); openCompose({}); });
 /* Ed controls that are outside this prototype still answer, so nothing looks broken. */
