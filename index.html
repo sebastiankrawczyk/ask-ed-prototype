@@ -2055,6 +2055,7 @@ function highlight(pid){
   document.querySelectorAll(".hlp.hl").forEach(x=>{ if(x!==el) x.classList.remove("hl"); });
   const cb = el.querySelector(".citedby"); if(cb && !cb.querySelector("[data-hlx]")) cb.insertAdjacentHTML("beforeend", ` <button class="hlx" data-hlx title="Remove highlight">×</button>`);
   setTimeout(()=>{ el.scrollIntoView({block:"center",behavior:"smooth"}); el.classList.add("hl"); }, 60);
+  if(cb) doneTask("source");  // the passage is shown with "CITED BY ASK ED": the participant found the source
 }
 function seqLabel(){
   const ps = state.pseq; if(!ps) return;
