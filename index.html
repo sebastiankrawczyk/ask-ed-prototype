@@ -487,9 +487,9 @@ button.likecol{cursor:pointer}
       <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/5</span></button>
       <div class="thint">Test tasks: they tick off by themselves.</div>
       <ol id="taskList">
+        <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Get back up to speed.</li>
         <li data-t="materials"><span class="bx">✓</span>Find good material to study for Quiz 4.</li>
         <li data-t="scope"><span class="bx">✓</span>Find out for sure what Quiz 4 covers.</li>
-        <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Get back up to speed.</li>
         <li data-t="cluster"><span class="bx">✓</span>Find out if optional readings are on Quiz 4, and whether someone already asked.</li>
         <li data-t="curve"><span class="bx">✓</span>Decide if you can count on Quiz 4 being curved.</li>
       </ol>
@@ -2161,7 +2161,7 @@ function updateCounts(){
 }
 function welcome(){
   const rec = state.history.length ? `<div class="recent"><div class="sugg-l">YOUR RECENT QUESTIONS</div>${state.history.map((h,i)=>{const n=(h.html.match(/class="msg-u"/g)||[]).length;return `<button class="rec" data-conv="${i}">${ICON.clock}<span class="x">${esc(h.title)}</span><span class="m">${n>1?n+" questions":"1 question"}</span></button>`}).join("")}</div>` : "";
-  const tryAsk = `<div class="sugg-l" id="tryAsk" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>s.k!=="missed").map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
+  const tryAsk = `<div class="sugg-l" id="tryAsk" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>s.k!=="missed" && s.k!=="weekly").map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
   $("#chatScroll").innerHTML = `<div class="welcome">
     <div class="big">${ICON.spark.replace('width="11" height="11"','width="20" height="20"')}</div>
     <h2>Ask anything about CS6750</h2>
@@ -2184,7 +2184,8 @@ $("#chatScroll").addEventListener("click", e => {
     $("#chatScroll").querySelectorAll(".active").forEach(x=>x.classList.remove("active"));
     c.classList.add("active","visited");
     const via = viaOf(c);
-    openSource(c.dataset.open, c, via); return;
+    state.viaMissed = (via==="digest" || via==="home-missed");  // a "what you missed" link counts only toward catching up
+    openSource(c.dataset.open, c, via); state.viaMissed = false; return;
   }
   const st = g(".steps-t"); if(st){ st.parentElement.classList.toggle("open"); return; }
   const fb = g("[data-fb]"); if(fb){
@@ -2276,7 +2277,7 @@ const SCRIPTS = {
    {ref:"t:2812:anki1",cat:"Lectures",title:byId[2812].title,score:.88,badge:"ok",sum:"A ~120-card Anki deck covering the Lessons 3.7–4.1 readings; each card cites its page. A TA spot-checked 30 cards.",meta:"Ben Smith · Nov 12 · "+byId[2812].com+" comments · 15 ♥"},
    {ref:"t:2805:notion1",cat:"Class Discussion",title:byId[2805].title,score:.64,badge:"no",sum:"Whole-course notes in Notion. Units 1–3 are finished; Unit 4 is in progress and may be out of date.",meta:"Carla Smith · Nov 11 · "+byId[2805].com+" comments"}
   ],
-  follow:["scope","weekly"]
+  follow:["scope","curve"]
  },
  scope: {
   steps:[["This is a <b>course rule</b> question, so I checked official course pages before student posts", 280],
@@ -2681,7 +2682,7 @@ function showResult(){
 function checkTasks(kind, id){
   if(kind==="t"){
     if([2849,2845,2838,2829,2820].includes(id)) doneTask("weekly");
-    if(id===2847 || id===2812) doneTask("materials");
+    if([2847,2812,2805].includes(id) && !state.viaMissed) doneTask("materials");
     if(id===2783 || id===2799 || id===2826) doneTask("cluster");
     if(id===2830) doneTask("curve");
     /* caught up = opened at least 2 of the posts that came in while away (digest, home card or thread list) */
