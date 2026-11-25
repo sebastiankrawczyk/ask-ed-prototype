@@ -483,14 +483,14 @@ button.likecol{cursor:pointer}
       <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/5</span></button>
       <div class="thint">Test tasks: they tick off by themselves.</div>
       <ol id="taskList">
-        <li data-t="materials"><span class="bx">✓</span>Get ready for Quiz 4 with what classmates have shared.</li>
+        <li data-t="materials"><span class="bx">✓</span>Find good material to study for Quiz 4.</li>
         <li data-t="scope"><span class="bx">✓</span>Find out for sure what Quiz 4 covers.</li>
         <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Get back up to speed.</li>
-        <li data-t="cluster"><span class="bx">✓</span>You want to ask if optional readings are on Quiz 4. Don't post a duplicate.</li>
+        <li data-t="cluster"><span class="bx">✓</span>Find out if optional readings are on Quiz 4, and whether someone already asked.</li>
         <li data-t="curve"><span class="bx">✓</span>Decide if you can count on Quiz 4 being curved.</li>
       </ol>
       <div class="tres" id="taskRes" hidden><b id="taskResTxt"></b><button id="copyRes">Copy result</button><span>Paste it into the survey.</span></div>
-      <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="dlLog" title="Save this session's interaction log (JSON)">Download log</button><button id="reset">Reset prototype</button></div>
+      <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="dlLog" title="Saves a JSON file on this computer: participant code, task results, and a timed list of clicks and typed questions or post titles. Nothing is sent anywhere.">Download log</button><button id="reset">Reset prototype</button></div>
     </div>
     <div class="online"><i></i>79 others online</div>
   </aside>
@@ -1200,7 +1200,7 @@ const CONTENT = [
 },
 "body": [
 "<p>Please post your Quiz 4 questions as replies in this thread so everyone can see the answers.</p>",
-"<p>For what the quiz covers, see the Quiz 4 page and the Syllabus on Canvas, which staff keep current.</p>"
+"<p>For what the quiz covers, see the <a href=\"#\" data-open2=\"d:quiz4:q4a\" data-via=\"thread-link\">Quiz 4 page</a> and the <a href=\"#\" data-open2=\"d:syllabus:syl1\" data-via=\"thread-link\">Syllabus</a> on Canvas, which staff keep current.</p>"
 ],
 "comments": [
 {
@@ -1861,7 +1861,7 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ===================== STATE ===================== */
-const state = { cat:null, q:"", showMore:false, open:null, read:new Set(), busy:false, tasks:new Set(), view:"home", history:[], cur:null, gen:0,
+const state = { cat:null, q:"", showMore:false, open:null, read:new Set(), seen:new Set(), busy:false, tasks:new Set(), view:"home", history:[], cur:null, gen:0,
   filter:null, ret:null, retDraft:null, paneRef:null, star:new Set(), watch:new Set(), liked:new Set(), linked:false, notified:false, daily:false,
   marked:[], draft:null, fast:false, nudged:false, pseq:null, lastKey:null, dupIdx:-1, pid:"" };
 /* URL flags for evaluation sessions: ?study=1 hides suggested questions, ?panel=closed starts collapsed, ?ask=off = plain-Ed baseline */
@@ -1994,7 +1994,7 @@ function navRow(nav){
 }
 function openThread(id, passage, nav){
   const t = byId[id]; if(!t) return;
-  state.open = id; state.paneRef = "t:"+id; state.read.add(id);
+  state.open = id; state.paneRef = "t:"+id; state.read.add(id); state.seen.add(id);
   const c = CAT[t.cat];
   const isQ = t.type==="q";
   const disc = isQ
@@ -2060,7 +2060,7 @@ $("#pane").addEventListener("click", e => {
   if(g("[data-canvas]")){ toast("In the live version this opens the page in Canvas. Here it is previewed inside Ed."); return; }
   if(g("[data-hlx]")){ const h=g(".hlp"); if(h) h.classList.remove("hl"); return; }
   if(g("[data-nextp]")){ nextPassage(); return; }
-  const o2 = g("[data-open2]"); if(o2){ openSource(o2.dataset.open2, null, "banner"); return; }
+  const o2 = g("[data-open2]"); if(o2){ e.preventDefault(); openSource(o2.dataset.open2, null, o2.dataset.via||"banner"); return; }
   if(g("[data-backres]")){ backToResults(); return; }
   const bp = g("[data-backprev]"); if(bp){ openSource(bp.dataset.backprev, null, "back"); return; }
   if(g("[data-retq]")){ const d = state.retDraft; state.retDraft = null; openChat(); if(d!=null) ci.value = d; ci.focus(); updateSend(); showDups(); g("[data-retq]").remove(); return; }
@@ -2182,7 +2182,6 @@ $("#chatScroll").addEventListener("click", e => {
     $("#chatScroll").querySelectorAll(".active").forEach(x=>x.classList.remove("active"));
     c.classList.add("active","visited");
     const via = viaOf(c);
-    if(via==="digest" || via==="home-missed") doneTask("missed");
     openSource(c.dataset.open, c, via); return;
   }
   const st = g(".steps-t"); if(st){ st.parentElement.classList.toggle("open"); return; }
@@ -2404,7 +2403,7 @@ $("#chatScroll").addEventListener("click", e => {
     state.marked = ids.filter(id=>!state.read.has(id)); state.marked.forEach(id=>state.read.add(id));
     box.querySelectorAll(".dg").forEach(x=>x.classList.add("readd"));
     a.dataset.act = "unmark"; a.textContent = `✓ Marked ${state.marked.length} as read · Undo`;
-    renderList(); updateCounts(); doneTask("missed"); return;
+    renderList(); updateCounts(); return;
   }
   if(act==="unmark"){
     (state.marked||[]).forEach(id=>state.read.delete(id)); state.marked = [];
@@ -2657,7 +2656,7 @@ function doneTask(k){
   log("task_done",{task:k});
   const li = $(`#taskList li[data-t="${k}"]`); if(li) li.classList.add("done");
   $("#taskCt").textContent = state.tasks.size+"/"+TASK_N;
-  if(state.tasks.size===TASK_N) showResult();
+  if(state.tasks.size===TASK_N || !$("#taskRes").hidden) showResult();
 }
 /* Result line participants paste into the survey: "4 of 5 done, 4:12" (time since load or last Reset) */
 function resultText(){
@@ -2675,10 +2674,12 @@ function checkTasks(kind, id){
     if(id===2847 || id===2812) doneTask("materials");
     if(id===2783 || id===2799 || id===2826) doneTask("cluster");
     if(id===2830) doneTask("curve");
+    /* caught up = opened at least 2 of the posts that came in while away (digest, home card or thread list) */
+    if(MISSED_IDS.filter(x=>state.seen.has(x)).length>=2) doneTask("missed");
   }
   if(kind==="d"){
     if(id==="quiz4" || (id==="syllabus" && state.lastKey==="scope")) doneTask("scope");
-    if(state.lastKey==="curve") doneTask("curve");
+    if(id==="syllabus" && state.lastKey==="curve") doneTask("curve");
   }
 }
 /* The task list lives in the sidebar; when the sidebar is hidden (narrow windows) it floats bottom-left. */
@@ -2693,14 +2694,14 @@ $("#tasksToggle").addEventListener("click", () => $("#tasks").classList.toggle("
 $("#hideTasks").addEventListener("click", () => $("#tasks").classList.add("min"));
 $("#finishTasks").addEventListener("click", showResult);
 $("#copyRes").addEventListener("click", () => {
-  const t = state.result || resultText();
+  const t = $("#taskRes").hidden ? resultText() : $("#taskResTxt").textContent;
   const ok = () => toast("Copied: "+t), fb = () => { const x=document.createElement("textarea"); x.value=t; document.body.appendChild(x); x.select(); try{document.execCommand("copy");}catch(e){} x.remove(); ok(); };
   (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(t).then(ok, fb) : fb();
 });
 $("#dlLog").addEventListener("click", () => {
   if(!state.pid){ const code = prompt("Participant code for this session (e.g. P03):", ""); if(code===null) return; state.pid = code.trim(); }
   const data = {participant: state.pid || "anonymous", started: new Date(T0).toISOString(), saved: new Date().toISOString(),
-    flags: {study:STUDY, panelClosed:PANEL_CLOSED, askOff:ASK_OFF}, tasksDone: [...state.tasks], result: state.result || resultText(), events: LOG};
+    flags: {study:STUDY, panelClosed:PANEL_CLOSED, askOff:ASK_OFF}, tasksDone: [...state.tasks], result: resultText(), events: LOG};
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:"application/json"}));
   a.download = `ask-ed-session-${(state.pid||"anonymous").replace(/[^\w-]+/g,"_")}.json`;
@@ -2712,7 +2713,7 @@ $("#reset").addEventListener("click", () => {
   cancelRun();
   Object.assign(state, {cat:null, q:"", showMore:false, open:null, filter:null, ret:null, retDraft:null, paneRef:null, linked:false, notified:false, daily:false,
     marked:[], draft:null, nudged:false, pseq:null, lastKey:null, pid:"", history:[], view:"home", cur:null});
-  [state.read, state.star, state.watch, state.liked].forEach(x=>x.clear());
+  [state.read, state.seen, state.star, state.watch, state.liked].forEach(x=>x.clear());
   $("#q").value=""; LOG = []; T0 = Date.now();
   renderCats(); renderList(); emptyPane(); welcome(); setHeader(); updateCounts();
   if(!ASK_OFF){ if(PANEL_CLOSED){ if(!$("#app").classList.contains("chat-off")) toggleChat(); } else openChat(); }
