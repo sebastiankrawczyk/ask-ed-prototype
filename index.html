@@ -1,0 +1,2753 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ask Ed Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap">
+<style>
+/* CS6750 team prototype (GulfBridgers): "Ask Ed" chat panel added to an Ed Discussion look-alike.
+   Single light theme on purpose: it mirrors the existing product, which has no dark mode. */
+:root{
+  color-scheme:light;
+  --purple:#50288c; --purple-dark:#3e1f6e; --purple-soft:#f1ecf8; --purple-line:#d9cdee; --purple-text:#5b2fa0;
+  --blue:#1d72e8; --blue-text:#2463c9; --sel:#d5e0fe; --dot:#0280ff;
+  --bg:#f8f8f8; --white:#fff; --line:#e6e6e6; --line2:#ececec;
+  --fg:#333; --fg2:#555; --muted:#888; --faint:#b3b3b3;
+  --name:#d9480f; --staff-bg:#fdeb7d; --staff-fg:#5e5200;
+  --green:#1f9d55; --green-bg:#e7f6ec; --red:#d0312d; --mark:#fff3a3;
+  --scroll:#a793c6;
+  --chat-w:440px;
+  --font:"Open Sans",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--white);color:var(--fg);font:13px/1.45 var(--font);display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+input,textarea{font:inherit;color:var(--fg)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--scroll);border-radius:4px}::-webkit-scrollbar-track{background:transparent}
+svg{flex:none}
+
+/* ---------- header ---------- */
+header{height:46px;flex:none;background:var(--purple);color:#fff;display:flex;align-items:center;padding-left:22px}
+.wordmark{font-size:26px;letter-spacing:-.5px;margin-right:22px;transform:translateY(-1px)}
+.inst{font-size:11.5px;line-height:1;font-weight:700;margin-right:24px}
+.inst span{display:block;font-weight:600}
+.htitle{font-size:17px}
+.hsp{flex:1}
+.hicons{display:flex;height:100%;align-items:stretch}
+.hicon{width:46px;display:grid;place-items:center;color:#fff;position:relative}
+.hicon svg{width:19px;height:19px}
+.hicon.on{background:var(--purple-dark)}
+.hicon:hover{background:rgba(255,255,255,.09)}
+.hsep{width:1px;background:rgba(255,255,255,.22);margin:9px 4px}
+.hicon.ask{width:auto;padding:0 13px;display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:600}
+.hicon.ask kbd{font:600 10px var(--font);background:rgba(255,255,255,.16);border-radius:3px;padding:1px 4px}
+.avatar-me{width:28px;height:28px;border-radius:50%;background:#7ed321;color:#fff;font-size:15px;display:grid;place-items:center;margin:0 14px 0 8px;align-self:center}
+
+/* ---------- layout ---------- */
+.app{flex:1;min-height:0;display:flex}
+.side{width:168px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side-scroll{flex:1;overflow:auto;padding:8px 0 10px}
+.newthread{margin:0 10px;width:calc(100% - 20px);height:31px;border-radius:4px;background:var(--blue);color:#fff;font-weight:600;font-size:12.5px;display:flex;align-items:center;justify-content:center;gap:6px}
+.slabel{font-size:10px;font-weight:700;color:#777;letter-spacing:.3px;margin:18px 12px 6px}
+.course{display:flex;justify-content:space-between;padding:5px 8px;margin:0 4px;border-radius:4px;font-size:11.5px;cursor:pointer}
+.course b{font-weight:400;color:var(--blue-text);font-size:10.5px}
+.course.on{background:var(--sel)}
+.cat{display:flex;align-items:center;gap:7px;padding:5px 12px;font-size:11.5px;cursor:pointer;width:100%;text-align:left}
+.cat i{width:7px;height:7px;flex:none}
+.cat:hover{background:#f4f4f4}
+.cat.on{background:var(--sel)}
+.online{flex:none;border-top:1px solid var(--line);padding:7px 12px;font-size:10.5px;color:var(--fg2);display:flex;align-items:center;gap:6px}
+.online i{width:7px;height:7px;border-radius:50%;background:#2fb85f}
+
+.list{width:276px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.search{height:40px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;border-bottom:1px solid var(--line)}
+.search input{border:0;outline:0;font-size:14px;flex:1;min-width:0;background:transparent}
+.search input::placeholder{color:#777}
+.filterbar{height:26px;flex:none;background:#f3f5f8;display:flex;align-items:center;justify-content:flex-end;padding:0 10px;font-size:10.5px;color:var(--blue-text);gap:4px}
+.list-scroll{flex:1;overflow:auto}
+.askbridge{display:none;margin:8px 10px;padding:8px 10px;border:1px dashed var(--purple-line);background:var(--purple-soft);border-radius:6px;font-size:11.5px;color:var(--purple-text);width:calc(100% - 20px);text-align:left}
+.askbridge.show{display:flex;gap:6px;align-items:flex-start}
+.group{font-size:10.5px;font-weight:600;padding:10px 14px 4px;color:#222}
+.item{display:block;width:100%;text-align:left;padding:9px 12px 8px 14px;border-bottom:1px solid var(--line2);position:relative}
+.item:hover{background:#fafafa}
+.item.on{background:#eef2fe}
+.item.flash{animation:flash 1.6s ease 2}
+@keyframes flash{0%,100%{background:#fff}40%{background:#e9defa}}
+.l1{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#222;min-width:0}
+.l1 .dot{width:5px;height:5px;border-radius:50%;background:var(--dot);flex:none}
+.l1 .dot.read{background:transparent}
+.l1 .ti{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.l1 svg{color:#9a9a9a}
+.l1 .pin{color:#9b3fdc}
+.l1 .tick{color:var(--green)}
+.l2{display:flex;align-items:center;gap:6px;font-size:9.5px;color:#666;margin:4px 0 0 11px;white-space:nowrap;min-width:0}
+.l2 .c{font-weight:700;overflow:hidden;text-overflow:ellipsis;max-width:92px}
+.l2 .au{overflow:hidden;text-overflow:ellipsis;max-width:90px}
+.l2 .r{margin-left:auto;display:flex;gap:7px;align-items:center;color:#888}
+.l2 .r span{display:flex;align-items:center;gap:2px}
+.l2 .new{color:var(--red)}
+.staff{background:var(--staff-bg);color:var(--staff-fg);font-size:7.5px;font-weight:700;padding:0 3px;border-radius:2px;letter-spacing:.3px}
+.more{display:block;width:100%;text-align:center;padding:9px;color:var(--blue-text);font-size:11px;border-bottom:1px solid var(--line2)}
+
+/* ---------- thread pane ---------- */
+.pane{flex:1;min-width:0;overflow:auto;background:var(--white);position:relative}
+.pane-back{display:none;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--blue-text);margin-bottom:12px}
+.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#666;font-size:17px;gap:14px;background:var(--bg)}
+.empty svg{width:72px;height:72px;color:#ddd}
+.thread{max-width:640px;margin:0 auto;padding:30px 28px 60px}
+.t-title{font-size:21px;font-weight:600;color:#222;margin:0 0 12px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.t-title small{font-size:17px;font-weight:400;color:#999}
+.t-meta{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.av{width:36px;height:36px;border-radius:50%;color:#fff;display:grid;place-items:center;font-size:16px;flex:none}
+.av.sm{width:26px;height:26px;font-size:13px}
+.who{font-size:12px}
+.who .n{color:var(--name)}
+.who .s{color:#888;font-size:10.5px}
+.t-stats{margin-left:auto;display:flex;gap:20px;font-size:8.5px;color:#777;text-align:center;letter-spacing:.3px}
+.t-stats div{display:flex;flex-direction:column;align-items:center;gap:2px}
+.t-stats .pinned{color:#9b3fdc}
+.t-stats b{font-size:14px;font-weight:400;color:#333}
+.t-body{display:flex;gap:16px}
+.likecol{display:flex;flex-direction:column;align-items:center;color:#999;font-size:13px;gap:2px;width:28px;flex:none}
+.likecol svg{width:22px;height:22px}
+.prose{font-size:12.5px;line-height:1.65;color:#333;flex:1;min-width:0}
+.prose p{margin:0 0 10px}
+.prose ul,.prose ol{margin:0 0 10px;padding-left:20px}
+.prose h3{font-size:14px;margin:18px 0 6px}
+.prose a{color:var(--blue-text)}
+.prose code{background:#f3f3f3;padding:1px 4px;border-radius:3px;font-size:11.5px}
+.att{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:4px;padding:5px 9px;font-size:11.5px;color:var(--blue-text);margin:0 6px 6px 0;background:#fafafa}
+.actions{display:flex;gap:12px;font-size:11px;color:#888;margin:4px 0 0}
+.hlp{border-radius:3px;transition:background .6s}
+.hlp.hl{background:var(--mark);box-shadow:0 0 0 3px var(--mark)}
+.citedby{display:none;font-size:9.5px;font-weight:700;color:var(--purple-text);letter-spacing:.3px;margin-bottom:3px}
+.hlp.hl .citedby,.hl>.citedby{display:block}
+.sortrow{display:flex;justify-content:flex-end;font-size:10.5px;color:#666;margin:14px 0 6px}
+.addc{border:1px solid var(--line);border-radius:3px;padding:7px 10px;color:#888;font-size:12px;display:flex;gap:8px;align-items:center;margin-bottom:16px}
+.cmt{display:flex;gap:10px;margin:0 0 16px}
+.cmt .cb{flex:1;min-width:0}
+.cmt .ch{font-size:10.5px;color:#888;margin-bottom:2px}
+.cmt .ch .n{color:var(--name);margin-right:4px}
+.cmt .cx{font-size:12px;line-height:1.6;color:#333}
+.cmt .cx p{margin:0 0 8px}
+.cmt .ca{display:flex;gap:14px;font-size:10.5px;color:#888;margin-top:4px}
+.cmt .kids{margin-top:12px;padding-left:4px;border-left:1px solid var(--line)}
+.endorsed{background:#e3f4e8;color:#1f7a44;font-size:7.5px;font-weight:700;padding:0 4px;border-radius:2px;margin-left:4px;letter-spacing:.3px}
+.answers-h{font-size:17px;font-weight:400;margin:30px 0 14px}
+.youranswer{margin-top:28px}
+.youranswer h4{font-size:17px;font-weight:400;margin:0 0 10px}
+.editor{border:1px solid var(--line);border-radius:3px;height:120px;background:#fff}
+.editor .tb{height:30px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 10px;color:#666;font-size:11px}
+.post{float:right;margin-top:10px;background:var(--blue);color:#fff;border-radius:4px;padding:5px 14px;font-weight:600;font-size:12px}
+
+/* course page preview in pane */
+.docbar{display:flex;align-items:center;gap:8px;font-size:11px;color:#666;background:#f6f3fb;border:1px solid var(--purple-line);border-radius:6px;padding:7px 10px;margin-bottom:18px}
+.docbar .k{font-weight:700;color:var(--purple-text);letter-spacing:.3px;font-size:9.5px}
+.docbar button{margin-left:auto;color:var(--blue-text);font-weight:600;display:flex;gap:4px;align-items:center}
+.doc h1{font-size:21px;font-weight:600;margin:0 0 4px}
+.doc .sub{color:#888;font-size:11px;margin-bottom:18px}
+.doc table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0 12px}
+.doc td,.doc th{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.doc th{background:#fafafa;font-weight:600}
+
+/* ---------- chat panel ---------- */
+.resizer{width:5px;flex:none;cursor:col-resize;background:transparent;border-left:1px solid var(--line);position:relative}
+.resizer:hover,.resizer.drag{background:var(--purple-line)}
+.chat{width:var(--chat-w);flex:none;display:flex;flex-direction:column;min-height:0;background:#fff}
+.app.chat-off .chat,.app.chat-off .resizer{display:none}
+.chat-h{height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 8px 0 14px;border-bottom:1px solid var(--line)}
+.chat-h .nm{font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px}
+.chat-h .nm svg{color:var(--purple)}
+.beta{font-size:8.5px;font-weight:700;letter-spacing:.4px;color:var(--purple-text);background:var(--purple-soft);border:1px solid var(--purple-line);border-radius:3px;padding:0 4px}
+.chat-h .sp{flex:1}
+.chat-h .nm{border-radius:5px;padding:3px 6px;margin-left:-6px;flex:none}
+.chat-h .nm:hover{background:var(--purple-soft)}
+.chat-h .back{display:flex;align-items:center;gap:2px;font-size:12px;font-weight:600;color:var(--purple-text);border:1px solid var(--purple-line);border-radius:5px;padding:3px 8px 3px 4px;margin-right:4px;flex:none}
+.chat-h .back:hover{background:var(--purple-soft)}
+.chat-h .back[hidden]{display:none}
+.crumb{font-size:11.5px;color:#888;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nq{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#fff;background:var(--purple);border-radius:5px;padding:4px 9px;flex:none}
+.nq:hover{background:var(--purple-dark)}
+.recent{margin-top:4px}
+.rec{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 10px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;font-size:12px;background:#fff}
+.rec:hover{border-color:var(--purple-line);background:#fcfaff}
+.rec .x{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec .m{font-size:10px;color:#999}
+.ib{width:28px;height:28px;border-radius:4px;display:grid;place-items:center;color:#666}
+.ib:hover{background:#f1f1f1;color:#222}
+.scope{flex:none;display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--line2);font-size:10.5px;color:#666;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:10px;padding:1px 8px;background:#fafafa;font-size:10.5px;color:#444}
+.chip i{width:6px;height:6px;border-radius:50%}
+.chat-scroll{flex:1;overflow:auto;padding:14px 16px 20px}
+.welcome{padding:22px 4px 8px}
+.welcome .big{width:40px;height:40px;border-radius:10px;background:var(--purple-soft);display:grid;place-items:center;color:var(--purple);margin-bottom:12px}
+.welcome h2{font-size:17px;font-weight:600;margin:0 0 4px}
+.welcome p{margin:0 0 16px;color:var(--fg2);font-size:12.5px}
+.sugg-l{font-size:10px;font-weight:700;color:#888;letter-spacing:.4px;margin:4px 0 8px}
+.sugg{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;transition:border-color .15s,background .15s}
+.sugg:hover{border-color:var(--purple-line);background:#fcfaff}
+.sugg .si{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;flex:none;background:#f3f3f3;color:#555}
+.sugg b{display:block;font-size:12.5px;font-weight:600;color:#222}
+.sugg span{font-size:11px;color:#888}
+.msg-u{display:flex;justify-content:flex-end;margin:14px 0 12px}
+.msg-u div{background:var(--purple-soft);border:1px solid var(--purple-line);border-radius:10px 10px 2px 10px;padding:7px 11px;max-width:85%;font-size:12.5px}
+.msg-a{margin-bottom:18px}
+.a-head{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;margin-bottom:8px}
+.a-head .lg{width:20px;height:20px;border-radius:5px;background:var(--purple);color:#fff;display:grid;place-items:center}
+.steps{border:1px solid var(--line);border-radius:6px;font-size:11px;color:#666;margin-bottom:10px;background:#fcfcfc}
+.steps-t{display:flex;align-items:center;gap:6px;width:100%;padding:6px 10px;text-align:left;color:#555}
+.steps-t .sp{flex:1}
+.steps-t .chev{transition:transform .15s}
+.steps.open .steps-t .chev{transform:rotate(90deg)}
+.steps ul{list-style:none;margin:0;padding:0 10px 7px 10px;display:none}
+.steps.open ul{display:block}
+.steps li{display:flex;gap:7px;align-items:flex-start;padding:2px 0}
+.steps li .st{width:13px;height:13px;flex:none;margin-top:1px;display:grid;place-items:center}
+.steps li.done .st{color:var(--green)}
+.steps li code{font-size:10px;background:#f1f1f1;padding:0 3px;border-radius:2px}
+.steps .tech{font-size:9.5px;color:#aaa;border:1px solid #e6e6e6;border-radius:3px;padding:0 4px;margin-left:4px;white-space:nowrap}
+.spin{width:11px;height:11px;border:2px solid #ddd;border-top-color:var(--purple);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ans{font-size:12.8px;line-height:1.62;color:#262626}
+.ans p{margin:0 0 9px}
+.ans ul{margin:0 0 9px;padding-left:18px}
+.ans li{margin-bottom:4px}
+.fade{animation:fin .35s ease both}
+@keyframes fin{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.cite{display:inline-grid;place-items:center;min-width:16px;height:15px;padding:0 4px;border-radius:8px;background:#ece7f6;color:var(--purple-text);font-size:9.5px;font-weight:700;vertical-align:1px;margin:0 1px;position:relative}
+.cite:hover{background:var(--purple);color:#fff}
+.cite .tip{display:none;position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;font-weight:400;font-size:10.5px;white-space:nowrap;padding:3px 7px;border-radius:4px;z-index:5;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+.cite:hover .tip{display:block}
+.origin{display:flex;gap:7px;align-items:flex-start;font-size:11px;background:#eef5ff;border:1px solid #cfe0fb;color:#1f4f99;border-radius:6px;padding:7px 9px;margin:0 0 10px}
+.facts{border:1px solid var(--line);border-radius:6px;margin:4px 0 10px;overflow:hidden}
+.facts div{display:flex;gap:10px;padding:6px 10px;border-bottom:1px solid var(--line2);font-size:12px}
+.facts div:last-child{border-bottom:0}
+.facts dt{width:84px;flex:none;color:#888;font-size:11px}
+.facts dd{margin:0;flex:1}
+.weekrow{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:6px 9px;border:1px solid var(--line);border-radius:6px;margin-bottom:5px;font-size:12px}
+.weekrow:hover{border-color:var(--purple-line);background:#fcfaff}
+.weekrow i{width:7px;height:7px;flex:none}
+.weekrow .d{width:30px;font-size:10px;font-weight:700;color:#888}
+.weekrow .x{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.weekrow .m{font-size:10px;color:#888}
+.weekrow.cur{border-color:var(--purple-line);background:var(--purple-soft)}
+.src-h{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:#777;letter-spacing:.4px;margin:14px 0 7px}
+.src-h .sp{flex:1}
+.src-h button{font-weight:600;color:var(--blue-text);letter-spacing:0;font-size:10.5px}
+.src{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin-bottom:7px;background:#fff;transition:border-color .15s,box-shadow .15s}
+.src:hover{border-color:#c9b8e6;box-shadow:0 1px 4px rgba(80,40,140,.08)}
+.src .r1{display:flex;align-items:center;gap:7px;font-size:10px;color:#777}
+.src .rk{width:17px;height:17px;border-radius:50%;background:#f0f0f0;color:#555;font-weight:700;display:grid;place-items:center;font-size:9.5px;flex:none}
+.src .cn{font-weight:700}
+.src .score{margin-left:auto;display:flex;align-items:center;gap:5px}
+.src .bar{width:42px;height:4px;border-radius:2px;background:#eee;overflow:hidden}
+.src .bar i{display:block;height:100%;background:var(--purple)}
+.src .tt{font-size:12.5px;font-weight:600;color:#222;margin:5px 0 3px}
+.src .sm{font-size:11.5px;color:#555;line-height:1.5}
+.src .sm .ai{font-size:9px;font-weight:700;color:var(--purple-text);letter-spacing:.3px;margin-right:4px}
+.src .r3{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px;color:#888;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;border-radius:3px;padding:1px 6px}
+.badge.ok{background:var(--green-bg);color:#1f7a44}
+.badge.no{background:#fff4e0;color:#9a5b00}
+.badge.post{background:#f2f2f2;color:#666}
+.badge.course{background:#eef5ff;color:#1f4f99}
+.badge.none{background:#fdecec;color:#b42318}
+.src .ext{margin-left:auto;color:var(--blue-text);font-weight:600;display:flex;gap:3px;align-items:center}
+.method{font-size:10.5px;color:#888;line-height:1.5;margin:2px 0 8px;display:flex;gap:6px}
+.fb{display:flex;align-items:center;gap:4px;margin-top:8px;color:#888;font-size:10.5px}
+.fb .ib{width:24px;height:24px}
+.fb .ib.sel{color:var(--purple);background:var(--purple-soft)}
+.follow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.follow button{border:1px solid var(--purple-line);background:#fff;color:var(--purple-text);border-radius:12px;padding:3px 10px;font-size:11px}
+.follow button:hover{background:var(--purple-soft)}
+.composer{flex:none;padding:10px 12px 8px;border-top:1px solid var(--line2)}
+.cbox{border:1px solid #d4d4d4;border-radius:8px;padding:8px 8px 6px 10px;background:#fff;transition:border-color .15s,box-shadow .15s}
+.cbox:focus-within{border-color:var(--purple);box-shadow:0 0 0 3px rgba(80,40,140,.1)}
+.cbox textarea{width:100%;border:0;outline:0;resize:none;font-size:12.5px;height:38px;display:block}
+.crow{display:flex;align-items:center;gap:6px;margin-top:4px}
+.scopetxt{font-size:10.5px;color:#999}
+.scope b{color:#555}
+.crow .sp{flex:1}
+.send{width:28px;height:28px;border-radius:6px;background:var(--purple);color:#fff;display:grid;place-items:center}
+.send:disabled{background:#cfc4e2;cursor:default}
+.disc{font-size:9.5px;color:#999;text-align:center;margin-top:6px}
+
+/* tasks + toast + footer */
+.tasks{flex:none;margin:6px 6px 8px;background:#fff;border:1px solid var(--purple-line);border-radius:7px;box-shadow:0 2px 8px rgba(80,40,140,.08);font-size:10.5px}
+.tasks-h{display:flex;align-items:center;gap:6px;padding:7px 10px;width:100%;text-align:left;font-weight:700;font-size:10.5px;letter-spacing:.3px;color:#555}
+.tasks-h .sp{flex:1}
+.tasks-h .ct{background:var(--purple-soft);color:var(--purple-text);border-radius:8px;padding:0 6px}
+.tasks ol{margin:0;padding:0 8px 7px 8px;list-style:none}
+.tasks li{display:flex;gap:7px;padding:3px 0;color:#444;line-height:1.35}
+.tasks li .bx{width:13px;height:13px;border:1.5px solid #bbb;border-radius:3px;flex:none;margin-top:1px;display:grid;place-items:center;color:#fff}
+.tasks li.done{color:#999;text-decoration:line-through}
+.tasks li.done .bx{background:var(--green);border-color:var(--green)}
+.tasks.min ol,.tasks.min .tfoot,.tasks.min .thint,.tasks.min .tres{display:none}
+.thint{padding:0 10px 5px;color:#888;font-size:10px}
+.tres{margin:0 8px 7px;padding:6px 8px;border-radius:5px;background:#eaf6ee;color:#245c36;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.tres[hidden]{display:none}.tres b{font-size:12px}.tres button{color:var(--blue-text);text-decoration:underline}.tres span{color:#4d7a5c;font-size:10px;flex-basis:100%}
+.tfoot{border-top:1px solid var(--line2);padding:6px 10px;display:flex;justify-content:space-between;color:var(--blue-text)}
+.toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%) translateY(20px);background:#222;color:#fff;padding:8px 14px;border-radius:6px;font-size:12px;opacity:0;transition:all .25s;pointer-events:none;z-index:30;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.proto{height:22px;flex:none;background:#f3f0f8;border-top:1px solid var(--purple-line);font-size:10px;color:#6b5a8a;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;white-space:nowrap;overflow:hidden}
+
+/* collapsed rail */
+.rail{display:none;width:46px;flex:none;border-left:1px solid var(--line);background:#fff;flex-direction:column;align-items:center;padding:8px 0;gap:6px}
+.app.chat-off .rail{display:flex}
+.rail .rb{width:34px;height:34px;border-radius:7px;display:grid;place-items:center;color:#555;position:relative}
+.rail .rb:hover{background:var(--purple-soft);color:var(--purple)}
+.rail .rb.main{background:var(--purple);color:#fff}
+.rail .rb.main:hover{background:var(--purple-dark);color:#fff}
+.rail .vt{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:700;color:var(--purple-text);letter-spacing:.4px;margin:4px 0 6px;cursor:pointer}
+.rail .bd{position:absolute;top:2px;right:1px;min-width:15px;height:15px;border-radius:8px;background:#ff4d6a;color:#fff;font-size:9px;font-weight:700;line-height:15px;text-align:center;padding:0 3px}
+.rail hr{width:22px;border:0;border-top:1px solid var(--line);margin:2px 0}
+/* what you missed */
+.missed-card{border:1px solid var(--purple-line);background:linear-gradient(180deg,#faf7ff,#fff);border-radius:9px;padding:11px 12px;margin:0 0 16px}
+.missed-card .mh{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;color:#222}
+.missed-card .mh .when{margin-left:auto;font-weight:400;font-size:10.5px;color:#888}
+.missed-card ul{margin:7px 0 9px;padding-left:16px;font-size:11.5px;color:#444}
+.missed-card li{margin-bottom:2px}
+.missed-card .go{font-size:11.5px;font-weight:600;color:#fff;background:var(--purple);border-radius:5px;padding:4px 10px}
+.tzchips{display:inline-flex;gap:3px;margin-left:4px;vertical-align:1px}
+.tzchips button{font-size:9.5px;border:1px solid var(--line);border-radius:8px;padding:0 6px;color:#666;background:#fff}
+.tzchips button.on{background:var(--purple-soft);border-color:var(--purple-line);color:var(--purple-text);font-weight:700}
+.ranges{display:flex;gap:6px;margin:2px 0 10px;flex-wrap:wrap}
+.ranges button{border:1px solid var(--line);border-radius:12px;padding:2px 10px;font-size:11px;color:#555;background:#fff}
+.ranges button.on{background:var(--purple);border-color:var(--purple);color:#fff}
+.dg-h{font-size:10px;font-weight:700;color:#888;letter-spacing:.4px;margin:10px 0 5px}
+.dg{display:flex;gap:9px;width:100%;text-align:left;padding:7px 9px;border:1px solid var(--line);border-radius:6px;margin-bottom:5px;font-size:12px;line-height:1.5;background:#fff}
+.dg:hover{border-color:#c9b8e6;background:#fcfaff}
+.dg .e{flex:none;width:18px;text-align:center}
+.dg .x{flex:1;min-width:0}
+.dgs{display:block;margin-top:3px}
+.dg .t{flex:none;font-size:10px;color:#999;margin-top:2px;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.dg .go2{font-size:10.5px;font-weight:600;color:var(--blue-text);white-space:nowrap}
+.dg:hover .go2{text-decoration:underline}
+.missed-card li button{text-align:left;color:#333;border-bottom:1px dashed #c9b8e6}
+.missed-card li button:hover{color:var(--purple-text);border-bottom-color:var(--purple)}
+.dg-foot{display:flex;gap:10px;align-items:center;margin-top:8px;font-size:11px}
+.dg-foot button{color:var(--blue-text);font-weight:600}
+/* cluster */
+.cluster{border:1px solid var(--line);border-radius:8px;padding:6px;margin:6px 0 10px;background:#fcfcfd}
+.cluster svg{width:100%;height:auto;display:block}
+.cluster g[data-open]{cursor:pointer}
+.cluster g[data-open]:hover rect{stroke:var(--purple)}
+.crow2{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 9px;border:1px solid var(--line);border-radius:6px;margin-bottom:5px;font-size:12px;background:#fff}
+.crow2:hover{border-color:#c9b8e6;background:#fcfaff}
+.crow2 .x{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow2 .m{font-size:10px;color:#999}
+.stag{flex:none;font-size:9px;font-weight:700;letter-spacing:.3px;border-radius:3px;padding:1px 5px;white-space:nowrap}
+.stag.staff{background:var(--green-bg);color:#1f7a44}
+.stag.student{background:#fff4e0;color:#9a5b00}
+.stag.none{background:#fdecec;color:#b42318}
+.stag.course{background:#eef5ff;color:#1f4f99}
+.stag.post{background:#f2f2f2;color:#666}
+.cl-act{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
+.cl-act button{border:1px solid var(--purple-line);border-radius:5px;padding:4px 10px;font-size:11.5px;font-weight:600;color:var(--purple-text);background:#fff}
+.cl-act button:hover{background:var(--purple-soft)}
+/* duplicate suggestions while typing */
+.composer{position:relative}
+.dup{position:absolute;left:12px;right:12px;bottom:calc(100% - 4px);background:#fff;border:1px solid var(--purple-line);border-radius:9px;box-shadow:0 -6px 22px rgba(60,30,110,.13);padding:8px 8px 6px;z-index:6;max-height:330px;overflow:auto}
+.dup[hidden]{display:none}
+.dup-h{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--purple-text);letter-spacing:.4px;padding:0 4px 6px}
+.dup-h .sp{flex:1}
+.dup-h button{color:#999;font-size:14px;line-height:1}
+.dupi{display:block;width:100%;text-align:left;padding:7px 8px;border-radius:6px}
+.dupi:hover,.dupi.kb{background:var(--purple-soft)}
+.dupi .a{display:flex;gap:7px;align-items:center;font-size:12px;font-weight:600;color:#222}
+.dupi .a .x{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dupi .a .sim{font-size:9.5px;font-weight:400;color:#999}
+.dupi .b{font-size:11px;color:#666;margin-top:2px;line-height:1.45;padding-left:2px}
+.dupi mark{background:#ece2fa;color:inherit;border-radius:2px;padding:0 1px}
+.dup-f{font-size:10.5px;color:#888;padding:5px 6px 0;border-top:1px solid var(--line2);margin-top:4px}
+/* ---- council improvements ---- */
+.filterbar{position:relative;justify-content:space-between}
+#filterBtn{color:var(--blue-text);display:flex;align-items:center;gap:4px;margin-left:auto;font-size:10.5px}
+.fpill{background:var(--sel);border-radius:9px;padding:0 7px;color:#1a4fb0;font-weight:600;font-size:10px}
+.fmenu{position:absolute;right:8px;top:24px;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);z-index:8;display:flex;flex-direction:column;min-width:150px;padding:4px}
+.fmenu[hidden]{display:none}
+.fmenu button{text-align:left;padding:5px 9px;font-size:12px;color:#333;border-radius:4px}
+.fmenu button:hover{background:#f3f5f8}
+.askbridge small{display:block;color:#7a6a99;font-size:10.5px;margin-top:2px}
+.l3{display:flex;gap:6px;align-items:flex-start;margin:4px 0 0 11px;font-size:10.5px;color:#555;line-height:1.4}
+.l3 span:last-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.reshead{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;font-size:10.5px;color:#666;border-bottom:1px solid var(--line2)}
+.chipb{border:1px solid var(--line);border-radius:10px;padding:1px 8px;font-size:10.5px;color:#1f7a44;background:#fff}
+.chipb.on{background:var(--green-bg);border-color:#9fd5b2;font-weight:700}
+.nores{padding:18px 14px;color:#888;font-size:12px}
+.nores div{margin-top:6px}
+.nores button{color:var(--blue-text)}
+.navrow{display:flex;gap:8px;flex-wrap:wrap;margin:-10px 0 14px}
+.navb{font-size:11.5px;font-weight:600;color:var(--blue-text);border:1px solid #d6e2f7;background:#f5f9ff;border-radius:5px;padding:3px 9px}
+.navb:hover{background:#e9f1ff}
+.linkban{display:flex;align-items:center;gap:8px;background:#e7f6ec;border:1px solid #b5e0c3;color:#1f5f38;border-radius:6px;padding:8px 10px;font-size:12px;margin:0 0 14px}
+.linkban button{margin-left:auto;font-weight:600;color:#1f7a44;white-space:nowrap}
+.sysnote{display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--purple-text);background:var(--purple-soft);border-radius:6px;padding:6px 10px;margin:12px 0}
+.tst{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8.5px;color:#777;letter-spacing:.3px}
+.tst.on{color:#b8860b}
+button.likecol{cursor:pointer}
+.likecol.on{color:#e0245e}
+.hlx{font-size:12px;color:var(--purple-text);margin-left:4px;padding:0 4px;border-radius:3px;line-height:1}
+.hlx:hover{background:#efe6fb}
+.nextp{font-size:9.5px;font-weight:700;color:#fff;background:var(--purple);border-radius:3px;padding:0 6px;margin-left:6px}
+.interp{font-size:11px;color:#666;background:#f7f7f9;border:1px solid var(--line2);border-radius:6px;padding:5px 8px;margin:0 0 9px;line-height:1.9}
+.interp button{border:1px solid var(--purple-line);border-radius:10px;padding:0 8px;margin:0 2px;color:var(--purple-text);background:#fff;font-size:10.5px;line-height:1.6}
+.a-head .sp{flex:1}
+.skip{font-size:10.5px;font-weight:600;color:var(--blue-text)}
+.send.stop{background:#3a3a3a}
+.cite.nudge,.src.nudge{animation:nudge 1.1s ease 2}
+@keyframes nudge{0%,100%{box-shadow:0 0 0 0 rgba(80,40,140,0)}50%{box-shadow:0 0 0 4px rgba(80,40,140,.28)}}
+.nudge-tip{font-size:11px;color:#5b4a7a;background:var(--purple-soft);border-radius:6px;padding:5px 8px;margin:2px 0 8px}
+.cite.active{background:var(--purple);color:#fff}
+.src.active,.dg.active,.crow2.active,.weekrow.active{border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-soft)}
+.src.visited .tt::after,.dg.visited .x>b:first-child::after,.crow2.visited .x::before,.weekrow.visited .x::before{content:"✓ ";color:#1f9d55;font-weight:700}
+.dg.readd{opacity:.55}
+.srcd summary{cursor:pointer;font-size:11.5px;color:var(--blue-text);font-weight:600;margin:2px 0 8px}
+.origin.warn{background:#fff6e5;border-color:#f3d39a;color:#7a4b00}
+.unverified{border:1px dashed #f0cf95;background:#fffaf0;border-radius:6px;padding:7px 10px;margin:0 0 10px}
+.unverified .uh{font-size:9.5px;font-weight:700;color:#9a5b00;letter-spacing:.4px;margin-bottom:3px}
+.unverified p{margin:0}
+.hints{font-size:11.5px;color:#777;background:#fafafa;border:1px dashed var(--line);border-radius:6px;padding:8px 10px}
+.missed-card.done{background:#f4fbf6;border-color:#b5e0c3}
+.missed-card .daily{font-size:10.5px;color:#1f7a44;margin-top:6px}
+.missed-card li button.readd{color:#999;text-decoration:line-through;border-bottom-color:transparent}
+.missed-card .mh .when button{color:var(--blue-text);font-weight:600}
+.compose .cform{display:flex;flex-direction:column;gap:10px}
+.ctype{display:flex;gap:6px}
+.ctype button{border:1px solid var(--line);border-radius:4px;padding:4px 12px;font-size:12px}
+.ctype button.on{background:var(--sel);border-color:#b9cdfb;color:#1a4fb0;font-weight:600}
+#cTitle{font-size:15px;padding:8px 10px;border:1px solid #d4d4d4;border-radius:4px}
+#cCat{padding:6px 8px;border:1px solid #d4d4d4;border-radius:4px;font-size:12.5px;max-width:260px;background:#fff}
+#cBody{min-height:140px;padding:8px 10px;border:1px solid #d4d4d4;border-radius:4px;font-size:13px;resize:vertical}
+.cdups{border:1px solid var(--purple-line);border-radius:8px;padding:6px 6px 4px;background:#fcfaff}
+.cbtns{display:flex;gap:12px;align-items:center}
+.cbtns .post{float:none;margin:0}
+.cdisc{color:#888;font-size:12px}
+.tfoot{gap:4px 10px;flex-wrap:wrap;justify-content:flex-start}
+.tfoot button{white-space:nowrap}
+.tfoot #reset{margin-left:auto}
+.ask-off .chat,.ask-off .resizer,.ask-off .rail,.ask-off #askToggle,.ask-off #askBridge{display:none!important}
+.course,.avatar-me,.online,.sortrow,.addc,.ca span,.actions span,.att,.editor{cursor:pointer}
+@media (max-width:1180px){.list{width:240px}.side{width:150px}:root{--chat-w:380px}}
+@media (max-width:980px){.side{display:none}}
+@media (max-width:1100px){.app:not(.chat-off) .side{display:none}}
+.tasks.float{position:fixed;left:10px;bottom:30px;width:236px;z-index:25;margin:0;box-shadow:0 6px 24px rgba(60,30,110,.18)}
+@media (max-width:760px){
+  .list{display:none} .htitle,.inst{display:none}
+  .app.chat-off:not(.has-thread) .list{display:flex;flex:1;width:auto}
+  .app.chat-off:not(.has-thread) .pane{display:none}
+  .pane-back{display:inline-flex!important}
+  .app:not(.chat-off) .pane{display:none}
+  .chat{width:100%!important}.resizer{display:none}
+  .hicon.ask kbd{display:none} .hicon.ask{font-size:0;gap:0}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">ed</div>
+  <div class="inst">Georgia<span>Tech.</span></div>
+  <div class="htitle">CS6750 – Ed Discussion</div>
+  <div class="hsp"></div>
+  <div class="hicons">
+    <button class="hicon on" title="Discussion" aria-label="Discussion"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h13v9H7l-4 3V4zm15 4h3v11l-4-3H8v-1h10V8z"/></svg></button>
+    <button class="hicon" title="Lessons" aria-label="Lessons"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4 3 8l9 4 7-3.1V14h2V8l-9-4zm-5 9.2V16c0 1.7 2.2 3 5 3s5-1.3 5-3v-2.8l-5 2.2-5-2.2z"/></svg></button>
+    <div class="hsep"></div>
+    <button class="hicon" title="Home" aria-label="Home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z"/></svg></button>
+    <button class="hicon" title="Notifications" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22zm7-6V11c0-3.3-2-6-5-6.7V3.5a2 2 0 0 0-4 0v.8C7 5 5 7.7 5 11v5l-2 2v1h18v-1l-2-2z"/></svg></button>
+    <button class="hicon ask on" id="askToggle" title="Ask Ed (Ctrl/⌘ + I)" aria-label="Toggle Ask Ed panel" aria-pressed="true">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8zM18 12l1 2.6 2.6 1-2.6 1L18 19l-1-2.4-2.6-1 2.6-1z"/></svg>
+      Ask Ed <kbd>⌘I</kbd>
+    </button>
+  </div>
+  <div class="avatar-me">S</div>
+</header>
+
+<div class="app" id="app">
+  <aside class="side">
+    <div class="side-scroll">
+      <button class="newthread" id="newThread"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.2V21h3.8l11-11-3.8-3.8-11 11zM20.7 7a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.8 3.8L20.7 7z"/></svg>New Thread</button>
+      <div class="slabel">COURSES</div>
+      <div class="course">CS 8001 OLL <b>29</b></div>
+      <div class="course on">CS6750 <b id="unreadCount">1164</b></div>
+      <div class="course">HCI Test Board Ple… <b>2</b></div>
+      <div class="slabel">CATEGORIES</div>
+      <div id="cats"></div>
+    </div>
+<div class="tasks" id="tasks">
+      <button class="tasks-h" id="tasksToggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>YOUR TASKS<span class="sp"></span><span class="ct" id="taskCt">0/5</span></button>
+      <div class="thint">Test tasks: they tick off by themselves.</div>
+      <ol id="taskList">
+        <li data-t="materials"><span class="bx">✓</span>Get ready for Quiz 4 with what classmates have shared.</li>
+        <li data-t="scope"><span class="bx">✓</span>Find out for sure what Quiz 4 covers.</li>
+        <li data-t="missed"><span class="bx">✓</span>You were away all weekend. Get back up to speed.</li>
+        <li data-t="cluster"><span class="bx">✓</span>You want to ask if optional readings are on Quiz 4. Don't post a duplicate.</li>
+        <li data-t="curve"><span class="bx">✓</span>Decide if you can count on Quiz 4 being curved.</li>
+      </ol>
+      <div class="tres" id="taskRes" hidden><b id="taskResTxt"></b><button id="copyRes">Copy result</button><span>Paste it into the survey.</span></div>
+      <div class="tfoot"><button id="hideTasks">Minimise</button><button id="finishTasks">Finish</button><button id="dlLog" title="Save this session's interaction log (JSON)">Download log</button><button id="reset">Reset prototype</button></div>
+    </div>
+    <div class="online"><i></i>79 others online</div>
+  </aside>
+
+  <section class="list" aria-label="Threads">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" placeholder="Search" autocomplete="off" aria-label="Search threads">
+    </div>
+    <div class="filterbar"><span id="fActive"></span><button id="filterBtn" aria-haspopup="menu">Filter <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></button>
+      <div class="fmenu" id="fmenu" role="menu" hidden><button data-f="">Any</button><button data-f="staff">Staff answered</button><button data-f="none">Unanswered</button><button data-f="unread">Unread</button></div></div>
+    <div class="list-scroll" id="listScroll">
+      <button class="askbridge" id="askBridge"></button>
+      <div id="list"></div>
+    </div>
+  </section>
+
+  <main class="pane" id="pane"></main>
+
+  <div class="resizer" id="resizer" title="Drag to resize"></div>
+
+  <aside class="chat" id="chat" aria-label="Ask Ed assistant">
+    <div class="chat-h">
+      <button class="back" id="chatBack" title="Back to Ask Ed home" aria-label="Back to Ask Ed home" hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg>Back</button><button class="nm" id="chatHome" title="Ask Ed home"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8zM18 12l1 2.6 2.6 1-2.6 1L18 19l-1-2.4-2.6-1 2.6-1z"/></svg>Ask Ed <span class="beta">BETA</span></button><span class="crumb" id="chatCrumb"></span>
+      <div class="sp"></div>
+      <button class="nq" id="newChat" title="Start a new question"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>New question</button>
+      <button class="ib" id="closeChat" title="Close panel" aria-label="Close panel"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="scope"><span>Searches <b>CS6750 only</b>: 1,164 Ed threads + Syllabus, Quiz and Schedule pages. Policy questions use course pages before student posts.</span>
+    </div>
+    <div class="chat-scroll" id="chatScroll"></div>
+    <div class="composer">
+      <div class="dup" id="dup" hidden></div>
+      <div class="cbox">
+        <textarea id="ci" placeholder="Ask about threads, quizzes, deadlines…" aria-label="Ask Ed a question"></textarea>
+        <div class="crow">
+          <span class="scopetxt">CS6750 only</span>
+          <div class="sp"></div>
+          <button class="send" id="send" disabled aria-label="Send"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5 21 12 3 3.5l2.5 7L15 12l-9.5 1.5z"/></svg></button>
+        </div>
+      </div>
+      <div class="disc">Answers are generated from Ed threads and course pages and always link their sources. Check them before relying on them.</div>
+    </div>
+  </aside>
+
+  <aside class="rail" id="rail" aria-label="Ask Ed (collapsed)">
+    <button class="rb main" data-rail="open" title="Open Ask Ed (⌘I)" aria-label="Open Ask Ed"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8zM18 12l1 2.6 2.6 1-2.6 1L18 19l-1-2.4-2.6-1 2.6-1z"/></svg></button>
+    <span class="vt" data-rail="open">ASK ED</span>
+    <hr>
+    <button class="rb" data-rail="missed" title="What you missed" aria-label="What you missed"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="bd" id="railBadge">5</span></button>
+    <button class="rb" data-rail="cluster" title="Related questions" aria-label="Related questions"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M6.5 7.3l3.6 3.2M17.5 7.3l-3.6 3.2M6.5 16.7l3.6-3.2M17.5 16.7l-3.6-3.2"/></svg></button>
+    <button class="rb" data-rail="new" title="New chat" aria-label="New chat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+  </aside>
+</div>
+
+<div class="proto">Prototype for a CS6750 team-project evaluation</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===================== DATA ===================== */
+const CATS = [
+  ["Class Discussion","#2f8fdd","#2463c9"],["Announcements","#2fb85f","#189a4c"],["Lectures","#f39c12","#c77700"],
+  ["Homework","#e74c3c","#c0392b"],["Tests","#9b59b6","#8e44ad"],["Quiz","#3cc4c4","#1a9a9a"],
+  ["Individual Project","#e84393","#c2185b"],["Team Project","#8bc34a","#5d8a00"],["Participant Recruitment","#6c5ce7","#5b46d6"],
+  ["Articles","#e67e22","#c0611a"],["Feedback Box","#c56cf0","#9b3fdc"],["Overleaf Help","#7fbf7f","#3d8b3d"],
+  ["Social","#c0392b","#a93226"],["Resources","#6aa88a","#3f7d61"],["Peer Review","#1e5bd8","#1e5bd8"],
+  ["Monday Reflections","#48d6a8","#1f9e78"],["Tuesday Media","#f6c90e","#a38400"],["Wednesday Readings","#1a2a8a","#1a2a8a"],
+  ["Thursday Applications","#a4b819","#788a00"],["Friday Humor","#ef5777","#e0245e"]
+];
+const CAT = {}; CATS.forEach(c => CAT[c[0]] = {dot:c[1], text:c[2]});
+
+// p("id","text") wraps a passage that citations can highlight.
+const p = (id, html) => `<p class="hlp" id="pp-${id}"><span class="citedby">✦ CITED BY ASK ED</span>${html}</p>`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const THREADS = [
+ {id:2849, grp:"pin", cat:"Friday Humor", type:"post", age:"1d", when:"Yesterday", likes:3, views:88},
+ {id:2836, grp:"pin", cat:"Announcements", type:"ann", age:"3d", when:"3 days ago", newc:3, likes:8, views:412},
+ {id:2810, grp:"pin", cat:"Team Project", type:"post", age:"4d", when:"4 days ago", com:193, unres:35, likes:1, views:1290},
+ {id:2845, grp:"pinmore", cat:"Thursday Applications", type:"post", age:"2d", when:"2 days ago", likes:2, views:120},
+ {id:2838, grp:"pinmore", cat:"Wednesday Readings", type:"post", age:"3d", when:"3 days ago", likes:4, views:141},
+ {id:2829, grp:"pinmore", cat:"Tuesday Media", type:"post", age:"4d", when:"4 days ago", likes:1, views:97},
+ {id:2820, grp:"pinmore", cat:"Monday Reflections", type:"post", age:"5d", when:"5 days ago", likes:5, views:203},
+ {id:2801, grp:"pinmore", cat:"Quiz", type:"post", age:"6d", when:"6 days ago", com:41, unres:6, likes:12, views:860},
+ {id:2790, grp:"pinmore", cat:"Team Project", type:"post", age:"7d", when:"7 days ago", com:12, likes:1, views:530},
+ {id:2702, grp:"pinmore", cat:"Announcements", type:"ann", age:"Nov 2", when:"Nov 2", likes:22, views:2410},
+ {id:2826, grp:"week", cat:"Class Discussion", type:"q", age:"2d", when:"2 days ago", likes:0, views:47},
+ {id:2830, grp:"week", cat:"Class Discussion", type:"q", age:"3d", when:"3 days ago", likes:2, views:96},
+ {id:2851, grp:"week", cat:"Participant Recruitment", type:"post", age:"4h", when:"4 hours ago", likes:0, views:22},
+ {id:2850, grp:"week", cat:"Class Discussion", type:"q", age:"6h", when:"6 hours ago", likes:0, views:40, answered:true},
+ {id:2848, grp:"week", cat:"Participant Recruitment", type:"q", age:"14h", when:"14 hours ago", likes:0, views:51},
+ {id:2847, grp:"week", cat:"Quiz", type:"post", age:"16h", when:"16 hours ago", likes:9, views:318, approved:true},
+ {id:2846, grp:"week", cat:"Class Discussion", type:"q", age:"20h", when:"20 hours ago", likes:0, views:63},
+ {id:2844, grp:"week", cat:"Participant Recruitment", type:"post", age:"22h", when:"22 hours ago", likes:0, views:30},
+ {id:2840, grp:"week", cat:"Social", type:"post", age:"1d", when:"Yesterday", likes:6, views:70},
+ {id:2843, grp:"week", cat:"Class Discussion", type:"q", age:"1d", when:"Yesterday", likes:0, views:144},
+ {id:2842, grp:"week", cat:"Team Project", type:"q", age:"2d", when:"2 days ago", likes:0, views:83, answered:true},
+ {id:2812, grp:"last", cat:"Lectures", type:"post", age:"Nov 12", when:"Nov 12", likes:15, views:402, approved:true},
+ {id:2805, grp:"last", cat:"Class Discussion", type:"post", age:"Nov 11", when:"Nov 11", likes:3, views:150},
+ {id:2799, grp:"last", cat:"Quiz", type:"q", age:"Nov 10", when:"Nov 10", likes:1, views:211},
+ {id:2795, grp:"last", cat:"Team Project", type:"q", age:"Nov 9", when:"Nov 9", likes:1, views:98, answered:true},
+ {id:2783, grp:"last", cat:"Lectures", type:"q", age:"Nov 6", when:"Nov 6", likes:4, views:265, answered:true},
+ {id:2788, grp:"last", cat:"Team Project", type:"q", age:"Nov 8", when:"Nov 8", likes:0, views:120, answered:true}
+];
+// Thread text: written for this prototype; every person is an invented "<First> Smith".
+const CONTENT = [
+{
+"id": 2849,
+"title": "Friday Humor, Week 13",
+"author": {
+"name": "Helen Smith",
+"staff": true
+},
+"body": [
+{
+"pid": "fh13",
+"html": "Happy Friday, everyone! Week 13 is almost in the books, so let's end it with a smile. Share your favorite examples of bad interface design from daily life: cartoons, photos, or your own stories of a gadget that fought back. Bonus points if you can name the design principle it breaks. 😄"
+}
+],
+"comments": [
+{
+"name": "Adam Smith",
+"staff": false,
+"endorsed": false,
+"age": "20h",
+"html": "<p>The pay kiosk at my local parking garage only accepts the ticket if you insert it with the arrow facing <i>away</i> from the slot. The arrow is printed on the ticket and points toward the slot. Four people were queued behind me, all of us rotating tickets like we were cracking a safe.</p>",
+"replies": [
+{
+"name": "Teresa Smith",
+"staff": false,
+"endorsed": false,
+"age": "11h",
+"html": "Ha, ours does the opposite. I'm convinced these machines are set up to test whether we believe the signifier or the manual."
+}
+]
+},
+{
+"name": "Leo Smith",
+"staff": false,
+"endorsed": false,
+"age": "16h",
+"html": "<p>My smart thermostat has a gorgeous dial, but turning it clockwise lowers the temperature in \"eco mode\" and raises it in every other mode. I now keep a sticky note on the wall that says \"IT LIES.\"</p>",
+"replies": []
+},
+{
+"name": "Nadia Smith",
+"staff": false,
+"endorsed": false,
+"age": "12h",
+"html": "<p>Our office microwave has 14 buttons, and the only one anyone ever uses is the unlabeled one in the corner that adds 30 seconds. The \"Popcorn\" button has burned more popcorn than it has popped. 🍿</p>",
+"replies": []
+},
+{
+"name": "Owen Smith",
+"staff": false,
+"endorsed": false,
+"age": "7h",
+"html": "<p>A hotel shower where the faucet handle needed to be pushed in, pulled out, AND turned to get water. No labels. I got a cold shower first, then a scalding one, and finally gave up and used the sink.</p>",
+"replies": []
+},
+{
+"name": "Priyanka Smith",
+"staff": false,
+"endorsed": false,
+"age": "2h",
+"html": "<p>My car's touchscreen buries the defrost button three menus deep, but has a dedicated shortcut for \"Seat massage.\" Priorities! 🚗</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2845,
+"title": "Thursday Applications, Week 13",
+"author": {
+"name": "Helen Smith",
+"staff": true
+},
+"body": [
+"<p>This week let's look at AI-assisted interfaces: chat assistants, autocomplete, smart replies, voice assistants, and the like.</p>",
+"<p>Think of one time an assistant made a task <b>easier</b> and one time it made it <b>harder</b>. Use the gulfs of execution and evaluation to explain why. Was it hard to figure out how to tell the assistant what you wanted? Or hard to tell whether what it did was right?</p>"
+],
+"comments": [
+{
+"name": "Hugo Smith",
+"staff": false,
+"endorsed": false,
+"age": "1d",
+"html": "<p>Easier: code autocomplete. The gulf of execution is tiny because I just keep typing and press Tab. Harder: a voice assistant on my phone that says \"Done!\" after setting an alarm, with no way to see which alarm it set. Big gulf of evaluation, and I was late once.</p>",
+"replies": []
+},
+{
+"name": "Mei Smith",
+"staff": false,
+"endorsed": false,
+"age": "22h",
+"html": "<p>Meeting-notes summarizer: great when it works, but I have to reread the whole transcript to check it didn't invent an action item, so the gulf of evaluation eats up the time it saved. Showing which sentence each bullet came from would help a lot.</p>",
+"replies": []
+},
+{
+"name": "Gabriel Smith",
+"staff": false,
+"endorsed": false,
+"age": "15h",
+"html": "<p>Smart reply suggestions in email are my example. Execution is one tap, which is great. But I once sent \"Sounds good, see you then!\" to a message that was actually asking me to approve a budget cut. 😬 The suggestion didn't show that it had misread the question.</p>",
+"replies": []
+},
+{
+"name": "Ingrid Smith",
+"staff": false,
+"endorsed": false,
+"age": "6h",
+"html": "<p>Photo search by description (\"beach 2019\") feels like magic because I don't need to know folders or tags. The downside is that when it returns nothing I can't tell whether the photo doesn't exist or I phrased it badly. Execution is easy but evaluation is weak.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2838,
+"title": "Wednesday Readings, Week 13",
+"author": {
+"name": "Helen Smith",
+"staff": true
+},
+"body": [
+"<p>Please share an article, blog post, or short paper related to this week's lessons on <b>agile development and HCI</b>. Tell us in a few sentences what it argues and how it connects to the lesson. Disagreement is welcome, so if you think the article gets something wrong, say so politely!</p>"
+],
+"comments": [
+{
+"name": "Felix Smith",
+"staff": false,
+"endorsed": false,
+"age": "2d",
+"html": "<p>I found a practitioner article about how teams squeeze user research into two-week sprints by running tiny usability tests every sprint instead of one big study at the end. It matches the lesson's point that evaluation should be continuous, but it glosses over how hard recruiting is when you only have a few days.</p>",
+"replies": []
+},
+{
+"name": "Zara Smith",
+"staff": false,
+"endorsed": false,
+"age": "1d",
+"html": "<p>There's an article on \"design debt\" that argues agile teams keep shipping quick fixes to the interface until it becomes inconsistent. I thought it was a good counterpoint to the idea that agile is always better for usability.</p>",
+"replies": []
+},
+{
+"name": "Tomas Smith",
+"staff": false,
+"endorsed": false,
+"age": "20h",
+"html": "<p>I read a case study from a company that put designers and developers in the same standup. They say the biggest win was catching handoff misunderstandings early. It reminded me of our own team project, where the prototype and the survey drifted apart until we synced up.</p>",
+"replies": []
+},
+{
+"name": "Yuki Smith",
+"staff": false,
+"endorsed": false,
+"age": "8h",
+"html": "<p>A short piece on user stories: it argues that \"As a user I want...\" often hides who the user really is. This ties nicely to needfinding, since a story is only as good as the people you actually talked to.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2829,
+"title": "Tuesday Media, Week 13",
+"author": {
+"name": "Helen Smith",
+"staff": true
+},
+"body": [
+"<p>Share a video, podcast episode, or game that says something about interface design. It can be a talk about design, a documentary clip, or a game whose UI you couldn't stop noticing. Tell us in a sentence or two what it shows and why it stuck with you.</p>"
+],
+"comments": [
+{
+"name": "Rafael Smith",
+"staff": false,
+"endorsed": false,
+"age": "3d",
+"html": "<p>A design podcast episode about how elevator buttons got their shape and placement. It made me realize how much accessibility work hides in details I never noticed. 🎧</p>",
+"replies": []
+},
+{
+"name": "Amara Smith",
+"staff": false,
+"endorsed": false,
+"age": "2d",
+"html": "<p>Not a video but a cooking game: the HUD shows only the info you need for the current step and fades out everything else. It's a lovely example of minimizing cognitive load and I'd steal it for our prototype if I could.</p>",
+"replies": []
+},
+{
+"name": "Dmitri Smith",
+"staff": false,
+"endorsed": false,
+"age": "19h",
+"html": "<p>A conference talk on error messages: the speaker walks through rewriting \"Error 0x80070057\" into something a human could act on. Short, funny, and very relevant to feedback and gulf of evaluation.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2820,
+"title": "Monday Reflections, Week 13",
+"author": {
+"name": "Helen Smith",
+"staff": true
+},
+"body": [
+"<p>Reflection prompt for this week: what surprised you while building low- or medium-fidelity prototypes for real users?</p>",
+"<p>Maybe a user ignored a feature you were proud of, or a paper sketch revealed a problem a polished mockup would have hidden. Share what you saw and what you changed afterward.</p>"
+],
+"comments": [
+{
+"name": "Lucia Smith",
+"staff": false,
+"endorsed": false,
+"age": "4d",
+"html": "<p>My paper prototype tester kept trying to <i>tap</i> a label that was only a heading. I would never have noticed that on a screen mockup where I could explain it away. Now every heading in our design looks clearly non-clickable.</p>",
+"replies": []
+},
+{
+"name": "Adam Smith",
+"staff": false,
+"endorsed": false,
+"age": "3d",
+"html": "<p>I was surprised how forgiving users were about ugly sketches. They gave far more honest feedback on a hand-drawn screen than they did on a polished one, probably because it looked unfinished and therefore changeable.</p>",
+"replies": [
+{
+"name": "Helen Smith",
+"staff": true,
+"endorsed": false,
+"age": "2d",
+"html": "<p>Yes, this is a well-known effect. A rough sketch invites critique, while a polished screen invites politeness. Thanks for sharing this!</p>"
+}
+]
+},
+{
+"name": "Mei Smith",
+"staff": false,
+"endorsed": false,
+"age": "2d",
+"html": "<p>Our medium-fidelity prototype had one flow that I thought was perfectly clear. Both testers took the long way around it. We were so close to the design that we couldn't see the shortcut was invisible.</p>",
+"replies": []
+},
+{
+"name": "Owen Smith",
+"staff": false,
+"endorsed": false,
+"age": "1d",
+"html": "<p>Surprise for me: testing with a family member felt too easy, so I recruited a coworker I'd never discussed the project with. They found three issues in ten minutes. 😅</p>",
+"replies": []
+},
+{
+"name": "Nadia Smith",
+"staff": false,
+"endorsed": false,
+"age": "10h",
+"html": "<p>I learned to stop talking during the test. I kept wanting to hint, and each time I did I lost a piece of data about what the interface wasn't communicating.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2836,
+"title": "Sample peer-review comments: what useful feedback looks like",
+"author": {
+"name": "Marcus Smith",
+"staff": true
+},
+"body": [
+"<p>Hi all! Several of you asked what good peer feedback looks like, so we put together a short set of anonymized sample comments. They show the difference between vague feedback (\"looks good\") and specific, actionable feedback that points to a concrete part of the work and suggests a next step.</p>",
+"<p>Please read through the samples before you write your next peer review. They are examples of tone and level of detail only, not a rubric, and they won't replace the grading criteria posted on Canvas. Questions are welcome below. 🙂</p>",
+{
+"attachments": [
+"sample-peer-review-comments.pdf"
+]
+}
+],
+"comments": [
+{
+"name": "Hugo Smith",
+"staff": false,
+"endorsed": false,
+"age": "2d",
+"html": "<p>This is really helpful, thanks! I like how the strong examples quote the exact part of the submission they're talking about.</p>",
+"replies": []
+},
+{
+"name": "Gabriel Smith",
+"staff": false,
+"endorsed": false,
+"age": "1d",
+"html": "<p>Is it okay to suggest a different design direction in peer review, or should we stick to critiquing what's there?</p>",
+"replies": [
+{
+"name": "Marcus Smith",
+"staff": true,
+"endorsed": true,
+"age": "20h",
+"html": "<p>Both are fine as long as you ground the suggestion in something you observed in the work. \"I got lost on the second screen, so maybe consider...\" works better than a general alternative.</p>"
+}
+]
+},
+{
+"name": "Ingrid Smith",
+"staff": false,
+"endorsed": false,
+"age": "11h",
+"html": "<p>The sample about tone was my favorite. Same critique, but one version reads as helpful and the other as harsh. Good reminder before I hit submit!</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2810,
+"title": "Team project: post your survey and interview links here",
+"author": {
+"name": "Marcus Smith",
+"staff": true
+},
+"body": [
+"<p>This pinned thread is the place to share your team's survey or interview-sign-up links so classmates can participate. <b>Post each link as a reply</b>, not as a new thread, so everything stays in one place and is easy to find.</p>",
+"<p>Ground rules:</p><ul><li>Include a one-line description of your study and how long it takes.</li><li>State clearly if you need participants with particular characteristics.</li><li>Don't collect names or emails unless you need them and have said so in your consent text.</li><li>Please respond to a couple of others' studies in return. 🤝</li></ul>"
+],
+"comments": [
+{
+"name": "Felix Smith",
+"staff": false,
+"endorsed": false,
+"age": "3d",
+"html": "<p><b>Team Harbor:</b> a 4-minute survey about how people find parking at train stations. Looking for anyone who commutes by rail at least twice a week. Link: [survey link]</p>",
+"replies": []
+},
+{
+"name": "Zara Smith",
+"staff": false,
+"endorsed": false,
+"age": "2d",
+"html": "<p><b>Team Lantern:</b> a short survey (about 6 minutes) on how people keep track of their houseplant watering. Open to everyone, plant owners or not. Link: [survey link]</p>",
+"replies": []
+},
+{
+"name": "Tomas Smith",
+"staff": false,
+"endorsed": false,
+"age": "1d",
+"html": "<p><b>Team Compass:</b> looking for 15-minute interviews with people who take part in community volunteer events. We can do video or phone. Please reply here and we'll send times. Link: [sign-up form]</p>",
+"replies": []
+},
+{
+"name": "Yuki Smith",
+"staff": false,
+"endorsed": false,
+"age": "6h",
+"html": "<p><b>Team Pebble:</b> a 5-minute survey on how people organize digital photos on their phones. Any phone users welcome. Happy to return the favor, so just drop your link below ours. Link: [survey link]</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2790,
+"title": "Team project questions: quick answers and common issues",
+"author": {
+"name": "Olivia Smith",
+"staff": true
+},
+"body": [
+"<p>Here are answers to the questions that come up most often about the team project. If your question isn't covered, add a comment and we'll fold it in.</p>",
+"<ul><li><b>Q: How many participants do we need for needfinding?</b><br>A: Follow the numbers in the assignment instructions on Canvas. Quality of insight matters more than raw counts.</li><li><b>Q: Can we reuse a participant across rounds?</b><br>A: It's allowed, but fresh participants usually give you fresher perspectives. Explain your reasoning in the report either way.</li><li><b>Q: Does everyone on the team have to write each section?</b><br>A: No, but the team should agree on who owns what and everyone should review the final text. Document this in your team notes.</li><li><b>Q: What if a team member goes quiet?</b><br>A: Message them first, then reach out to us early rather than at the deadline.</li></ul>"
+],
+"comments": [
+{
+"name": "Rafael Smith",
+"staff": false,
+"endorsed": false,
+"age": "6d",
+"html": "<p>Thanks for this! Could we add a question about what counts as an acceptable consent statement for a survey?</p>",
+"replies": []
+},
+{
+"name": "Amara Smith",
+"staff": false,
+"endorsed": false,
+"age": "4d",
+"html": "<p>For the \"quiet teammate\" case, a short weekly check-in message helped us a lot. Nothing formal, just \"what are you on this week?\"</p>",
+"replies": []
+},
+{
+"name": "Olivia Smith",
+"staff": true,
+"endorsed": true,
+"age": "2d",
+"html": "<p>Good question, Rafael! Consent text should say what you're collecting, why, how long it takes, and that participation is voluntary. Check the assignment page for the specific requirements.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2702,
+"title": "Course calendar and date changes",
+"author": {
+"name": "Helen Smith",
+"staff": true
+},
+"body": [
+"<p>The official deadlines for every assignment, quiz, and project milestone live on the <b>Canvas course schedule</b>. That page is always the source of truth.</p>",
+"<p>When something changes during the term, we'll log it in the comments of this thread so there's one place to check. Please subscribe to this thread to get notified.</p>"
+],
+"comments": [
+{
+"name": "Helen Smith",
+"staff": true,
+"endorsed": false,
+"age": "Nov 2",
+"html": "<p>Thread opened. No changes yet. Everything matches the Canvas schedule as of today.</p>",
+"replies": []
+},
+{
+"name": "Marcus Smith",
+"staff": true,
+"endorsed": false,
+"age": "Nov 9",
+"html": "<p>Update: a team project milestone was adjusted slightly to give teams more time for peer review. Check the Canvas schedule for the current date. Sorry for any trouble!</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2847,
+"title": "Sharing my notes before the last quiz",
+"age": "16h",
+"author": {
+"name": "Anika Smith",
+"staff": false
+},
+"body": [
+"<p>Hey all! I put together a little pack while prepping for the quiz and figured it might save someone a few hours. It is split into three parts, so grab whichever is useful 🙂</p>",
+{
+"pid": "sg1",
+"html": "<b>Part 1, lesson summaries:</b> one page per required reading for Lessons 3.7, 3.8 and 4.1, with the <b>key terms in bold</b> so you can skim fast."
+},
+{
+"pid": "sg2",
+"html": "<b>Part 2, practice questions:</b> 20 practice multiple-choice questions in the style of the earlier quizzes, with an answer key and a one-line explanation for each."
+},
+{
+"pid": "sg3",
+"html": "<b>Part 3, glossary:</b> about 60 terms from Units 3 and 4, in alphabetical order."
+},
+{
+"attachments": [
+"quiz4-summaries.pdf",
+"practice-20.pdf",
+"glossary.pdf"
+]
+}
+],
+"comments": [
+{
+"name": "Helen Smith",
+"staff": true,
+"endorsed": true,
+"age": "14h",
+"html": "<p class=\"hlp\" id=\"pp-end47\"><span class=\"citedby\">✦ CITED BY ASK ED</span>Thanks for sharing, Anika. I checked the practice questions against the readings and they are accurate. Nice work, and a great resource for anyone who wants extra practice.</p>",
+"replies": []
+},
+{
+"name": "Kevin Smith",
+"staff": false,
+"endorsed": false,
+"age": "11h",
+"html": "<p>This is amazing, thank you! The glossary alone is going to save me so much time.</p>",
+"replies": []
+},
+{
+"name": "Sofia Smith",
+"staff": false,
+"endorsed": false,
+"age": "8h",
+"html": "<p>Quick question: are the practice questions harder or easier than the real quizzes in your experience?</p>",
+"replies": [
+{
+"name": "Anika Smith",
+"staff": false,
+"endorsed": false,
+"age": "6h",
+"html": "<p>I tried to match the earlier quizzes, so about the same. A couple are slightly trickier on purpose so the real thing feels easy 😄</p>"
+}
+]
+},
+{
+"name": "Jamal Smith",
+"staff": false,
+"endorsed": false,
+"age": "5h",
+"html": "<p>Downloaded all three. Thanks a ton!</p>",
+"replies": []
+},
+{
+"name": "Elena Smith",
+"staff": false,
+"endorsed": false,
+"age": "3h",
+"html": "<p>Super helpful, the one-line explanations in the answer key are exactly what I needed. Thank you!</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2812,
+"title": "Anki deck for the Unit 3-4 readings",
+"age": "Nov 12",
+"author": {
+"name": "Ben Smith",
+"staff": false
+},
+"body": [
+"<p>I live in Anki when prepping for quizzes, so I made a deck and figured I would share it.</p>",
+{
+"pid": "anki1",
+"html": "An Anki flashcard deck of about 120 cards for the required readings in Lessons 3.7 to 4.1, which is what the next quiz covers. Each card cites the page of the reading it came from, so you can jump back to the source."
+},
+{
+"attachments": [
+"cs6750-unit3-4.apkg"
+]
+}
+],
+"comments": [
+{
+"name": "Olivia Smith",
+"staff": true,
+"endorsed": true,
+"age": "Nov 12",
+"html": "<p class=\"hlp\" id=\"pp-end12\"><span class=\"citedby\">✦ CITED BY ASK ED</span>I spot-checked 30 cards against the readings and they look good. Nice job, Ben! Endorsing this one.</p>",
+"replies": []
+},
+{
+"name": "Victor Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 13",
+"html": "<p>Thanks Ben, importing it now. Do you recommend any particular daily new-card limit?</p>",
+"replies": []
+},
+{
+"name": "Hana Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 15",
+"html": "<p>Works great on the mobile app too. The page citations are a really nice touch.</p>",
+"replies": []
+},
+{
+"name": "Oscar Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 18",
+"html": "<p>Been doing about 30 cards a day for a few days now and it is paying off. Thanks!</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2805,
+"title": "[WIP] Notion notes for the whole course",
+"age": "Nov 11",
+"author": {
+"name": "Carla Smith",
+"staff": false
+},
+"body": [
+"<p>Sharing my Notion notes in case they help anyone. Fair warning, this is still a work in progress.</p>",
+{
+"pid": "notion1",
+"html": "Notion notes for the whole course. Units 1 to 3 are done. Unit 4 is still in progress, so parts of it may be out of date, so please double-check against the lessons."
+}
+],
+"comments": [
+{
+"name": "Grace Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 12",
+"html": "<p>Love the layout, thanks for sharing! Looking forward to the Unit 4 part.</p>",
+"replies": []
+},
+{
+"name": "Ivan Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 14",
+"html": "<p>Units 1 to 3 look really clean. Do you plan to add a page for the team project too?</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2801,
+"title": "Quiz 4 Megathread",
+"age": "6d",
+"author": {
+"name": "Olivia Smith",
+"staff": true
+},
+"body": [
+"<p>Please post your Quiz 4 questions as replies in this thread so everyone can see the answers.</p>",
+"<p>For what the quiz covers, see the Quiz 4 page and the Syllabus on Canvas, which staff keep current.</p>"
+],
+"comments": [
+{
+"name": "Chloe Smith",
+"staff": false,
+"endorsed": false,
+"age": "5d",
+"html": "<p>Is Quiz 4 open-notes like Quizzes 1 to 3?</p>",
+"replies": [
+{
+"name": "Olivia Smith",
+"staff": true,
+"endorsed": false,
+"age": "5d",
+"html": "<p>Yes, same format as before. Details are on the Quiz 4 page.</p>"
+}
+]
+},
+{
+"name": "Malik Smith",
+"staff": false,
+"endorsed": false,
+"age": "4d",
+"html": "<p>Do we get more than one attempt on this quiz?</p>",
+"replies": [
+{
+"name": "Marcus Smith",
+"staff": true,
+"endorsed": false,
+"age": "4d",
+"html": "<p>Everything about attempts and timing is on the Quiz 4 page, so please check there.</p>"
+}
+]
+},
+{
+"name": "Rosa Smith",
+"staff": false,
+"endorsed": false,
+"age": "2d",
+"html": "<p>Will there be questions about the team project material?</p>",
+"replies": [
+{
+"name": "Olivia Smith",
+"staff": true,
+"endorsed": false,
+"age": "2d",
+"html": "<p>The Quiz 4 page lists what is covered, so please check it there.</p>"
+}
+]
+},
+{
+"name": "Ethan Smith",
+"staff": false,
+"endorsed": false,
+"age": "1d",
+"html": "<p>Is there an announcement when the quiz opens, or do we just watch Canvas?</p>",
+"replies": [
+{
+"name": "Marcus Smith",
+"staff": true,
+"endorsed": false,
+"age": "1d",
+"html": "<p>The Quiz 4 page has those details, and it is kept up to date.</p>"
+}
+]
+}
+]
+},
+{
+"id": 2799,
+"title": "Do the optional readings show up on quizzes?",
+"age": "Nov 10",
+"author": {
+"name": "Diego Smith",
+"staff": false
+},
+"body": [
+"<p>Quick one: do the optional readings ever show up on the quizzes, or is it just the required ones? I am short on time and trying to prioritize.</p>"
+],
+"comments": [
+{
+"name": "Ayesha Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 11",
+"html": "<p>I think only required, but not sure.</p>",
+"replies": []
+},
+{
+"name": "Kevin Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 13",
+"html": "<p>Same question here, would love a confirmation.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2788,
+"title": "How polished should the prototype be for the evaluation phase?",
+"age": "Nov 8",
+"author": {
+"name": "Fatima Smith",
+"staff": false
+},
+"body": [
+"<p>Our team is starting on the prototype we will use in the evaluation phase. We are split on how far to take it: some of us want clickable screens that look nearly finished, others want rough sketches we can swap out quickly.</p>",
+"<p>How much polish is actually worth the time? We only have a couple of weeks and do not want to over-invest in something participants will only poke at briefly.</p>"
+],
+"comments": [
+{
+"name": "Sofia Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 9",
+"html": "<p>Our team went rough and it worked fine for us. Participants focused on the flow instead of the colors.</p>",
+"replies": []
+},
+{
+"name": "Jamal Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 9",
+"html": "<p>I would say polish only the parts you want feedback on, and leave the rest as placeholders.</p>",
+"replies": []
+},
+{
+"name": "Marcus Smith",
+"staff": true,
+"endorsed": true,
+"age": "Nov 10",
+"html": "<p>Good question. Match the prototype to what you are trying to learn in the evaluation. If you are testing the flow and the main tasks, a rough, quickly editable prototype is fine, and extra polish can even distract participants from the core issues. Add detail only where your evaluation questions need it, and be ready to explain your choice in the report.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2851,
+"title": "Team Lantern seeks testers for 15-min prototype evaluation (study-group scheduler)",
+"author": {
+"name": "Noah Smith",
+"staff": false
+},
+"body": [
+"<p>Hi all! Our team is building <b>HuddleUp</b>, a study-group scheduler that finds overlapping free time across time zones (very OMSCS-relevant 😅). We have a medium-fidelity clickable prototype ready and need classmates to evaluate it.</p>",
+"<p><b>What you'll do:</b></p><ul><li>Complete 3 short tasks in the prototype (about 10 min)</li><li>Answer 4 follow-up questions (about 5 min)</li></ul>",
+"<p>Sessions run over Zoom or a screen-share of your choice, no install needed. Everything is anonymized and only used for our project report. Comment below or DM me with a couple of time windows that work for you and I'll send an invite. Happy to evaluate your prototype in return!</p>"
+],
+"comments": [
+{
+"name": "Julia Smith",
+"staff": false,
+"endorsed": false,
+"age": "3h",
+"html": "<p>Count me in! I'm free Sunday afternoon or any weekday after 8pm ET. Would love a swap for our team's prototype too.</p>",
+"replies": [
+{
+"name": "Noah Smith",
+"staff": false,
+"endorsed": false,
+"age": "2h",
+"html": "<p>Perfect, Sunday 2pm ET works. I'll send the invite shortly and DM you the swap details.</p>"
+}
+]
+},
+{
+"name": "Samir Smith",
+"staff": false,
+"endorsed": false,
+"age": "1h",
+"html": "<p>Signed up via DM. Is it okay to think aloud during the tasks?</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2850,
+"title": "PDF export from Word keeps shifting my figures to the wrong page",
+"author": {
+"name": "Freya Smith",
+"staff": false
+},
+"body": [
+"<p>Has anyone else run into this? I write my reports in Word and export to PDF, and my figures keep jumping onto the next page, leaving big white gaps. It looks fine in the editor but the exported PDF is different.</p>",
+"<p>I've tried changing margins and image wrapping, with no luck. I'd really like to avoid a last-minute scramble before the submission deadline. Any tips?</p>"
+],
+"comments": [
+{
+"name": "Mateo Smith",
+"staff": false,
+"endorsed": false,
+"age": "5h",
+"html": "<p>Do you have your images set to \"In line with text\"? That tends to behave better than floating images when exporting.</p>",
+"replies": []
+},
+{
+"name": "Freya Smith",
+"staff": false,
+"endorsed": false,
+"age": "4h",
+"html": "<p>Yes, I do. And a few of them are floating with \"Fix position on page\" ticked.</p>",
+"replies": []
+},
+{
+"name": "Linnea Smith",
+"staff": false,
+"endorsed": false,
+"age": "2h",
+"html": "<p class=\"hlp\" id=\"pp-pdf1\"><span class=\"citedby\">✦ CITED BY ASK ED</span>That's probably the culprit. Switch everything to in-line, then use <b>File &gt; Export &gt; Create PDF/XPS</b> instead of \"Print to PDF\". The print route re-flows the layout with your printer driver's metrics, which is what shifts things around. Mine went from 9 pages with gaps to exactly 7 after that.</p>",
+"replies": [
+{
+"name": "Freya Smith",
+"staff": false,
+"endorsed": false,
+"age": "1h",
+"html": "<p>That fixed it, thank you! I was using Print to PDF the whole time 🙈</p>"
+}
+]
+},
+{
+"name": "Kofi Smith",
+"staff": false,
+"endorsed": false,
+"age": "1h",
+"html": "<p>Bonus tip: open the exported PDF and check page count and fonts before uploading, just to be safe.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2848,
+"title": "Survey on podcast listening habits (4-6 min)",
+"author": {
+"name": "Isabel Smith",
+"staff": false
+},
+"body": [
+"<p>Hi everyone! For our needfinding step we are looking at how people <b>choose and keep up with podcasts</b>. The survey takes about 4-6 minutes and is fully anonymous.</p>",
+"<p>You're eligible if you listen to podcasts at least once a month. We'd also welcome responses from people who tried podcasts and gave up. Any perspective helps!</p>",
+"<p>Happy to fill out yours in return, just drop the link below.</p>"
+],
+"comments": [
+{
+"name": "Arjun Smith",
+"staff": false,
+"endorsed": false,
+"age": "12h",
+"html": "<p>Done! Question 6 felt a little ambiguous: does \"regularly\" mean weekly or daily?</p>",
+"replies": [
+{
+"name": "Isabel Smith",
+"staff": false,
+"endorsed": false,
+"age": "9h",
+"html": "<p>Good catch, thank you. We'll add \"at least weekly\" to the wording.</p>"
+}
+]
+},
+{
+"name": "Petra Smith",
+"staff": false,
+"endorsed": false,
+"age": "9h",
+"html": "<p>Finished it in about 5 min. Here's ours too: a survey on meal-planning habits, 5 min.</p>",
+"replies": []
+},
+{
+"name": "Wesley Smith",
+"staff": false,
+"endorsed": false,
+"age": "5h",
+"html": "<p>Submitted! Is it fine if I share it with a couple of non-OMSCS friends who listen a lot? They would fit your target group well.</p>",
+"replies": [
+{
+"name": "Isabel Smith",
+"staff": false,
+"endorsed": false,
+"age": "4h",
+"html": "<p>Yes, please do. Anyone over 18 is welcome.</p>"
+}
+]
+}
+]
+},
+{
+"id": 2846,
+"title": "How strict should peer-review feedback be on written assignments?",
+"author": {
+"name": "Nina Smith",
+"staff": false
+},
+"body": [
+"<p>This is my first time doing peer review in this course and I'm a bit unsure about the right level of detail. Should I point out every wording problem, or focus mainly on whether the rubric items are met?</p>",
+"<p>I also don't want to be harsh with scores when the writer clearly tried but missed a requirement. How are you all approaching it?</p>"
+],
+"comments": [
+{
+"name": "Caleb Smith",
+"staff": false,
+"endorsed": false,
+"age": "17h",
+"html": "<p>I go through the rubric line by line, quote the relevant sentence from their work, and say whether it meets the criterion. Then I add one or two suggestions at the end. It keeps my comments grounded and not personal.</p>",
+"replies": []
+},
+{
+"name": "Esme Smith",
+"staff": false,
+"endorsed": false,
+"age": "11h",
+"html": "<p>Same here. I try to write the kind of feedback I'd want to receive: specific, kind, and tied to the rubric. Typos only get a mention if they hurt clarity.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2844,
+"title": "Needfinding survey: commuting with e-scooters (5 min)",
+"author": {
+"name": "Rohan Smith",
+"staff": false
+},
+"body": [
+"<p>Hello! Our team is exploring the experience of <b>commuting with e-scooters and e-bikes</b>: parking, safety, charging and route planning. We have a short anonymous survey (about 5 minutes).</p>",
+"<p>You don't need to own a scooter. If you've used a shared one even once, or avoided them on purpose, we'd like to hear from you.</p>",
+"<p>Link is in the first comment. Thank you! 🛴</p>"
+],
+"comments": [
+{
+"name": "Tess Smith",
+"staff": false,
+"endorsed": false,
+"age": "20h",
+"html": "<p>Filled it in. I don't use them but my reasons for avoiding them were easy to express, so the questions work for non-riders too.</p>",
+"replies": []
+},
+{
+"name": "Noah Smith",
+"staff": false,
+"endorsed": false,
+"age": "15h",
+"html": "<p>Done! One suggestion: add an option for \"weather\" in the question about reasons for not riding.</p>",
+"replies": [
+{
+"name": "Rohan Smith",
+"staff": false,
+"endorsed": false,
+"age": "15h",
+"html": "<p>Great point, adding it now.</p>"
+}
+]
+}
+]
+},
+{
+"id": 2843,
+"title": "Late submissions and regrade requests: how do they usually work?",
+"author": {
+"name": "Julia Smith",
+"staff": false
+},
+"body": [
+"<p>Two related questions for people who've been through this course or similar ones. If an assignment is a few hours late, is there generally a reduction, or is it case by case?</p>",
+"<p>And if I think a rubric item was marked incorrectly, what's the usual way to ask for a second look? I'd like to understand it before I actually need it.</p>"
+],
+"comments": [
+{
+"name": "Samir Smith",
+"staff": false,
+"endorsed": false,
+"age": "22h",
+"html": "<p>Check the syllabus and the assignment instructions for the exact numbers, since I'd rather not misquote them. From what I remember, regrade requests need to be polite, specific and tied to the rubric.</p>",
+"replies": []
+},
+{
+"name": "Freya Smith",
+"staff": false,
+"endorsed": false,
+"age": "10h",
+"html": "<p>Agreed. Also, if something happens, ask early rather than after the deadline. Teaching staff tend to be reasonable when you communicate in advance.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2842,
+"title": "Can appendices go beyond the team report page limit?",
+"author": {
+"name": "Mateo Smith",
+"staff": false
+},
+"body": [
+"<p>Our team report is right at the page limit, but we have survey instruments, interview scripts and a few screenshots we'd like to include as evidence.</p>",
+"<p>Do appendices count toward the limit, or can they be added after the main body? And if they can, should they be referenced from the text?</p>"
+],
+"comments": [
+{
+"name": "Linnea Smith",
+"staff": false,
+"endorsed": false,
+"age": "1d",
+"html": "<p>I'd also like to know this. We're in the same position with our interview guide.</p>",
+"replies": []
+},
+{
+"name": "Marcus Smith",
+"staff": true,
+"endorsed": true,
+"age": "20h",
+"html": "<p class=\"hlp\" id=\"pp-app1\"><span class=\"citedby\">✦ CITED BY ASK ED</span>Appendices don't count toward the page limit, but graders are not required to read them. Your main text should stand on its own, and every appendix should be referenced from the body so it's clear why it's there.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2840,
+"title": "Spotted a design lesson in my kitchen scale 😄",
+"author": {
+"name": "Kofi Smith",
+"staff": false
+},
+"body": [
+"<p>Small win for design appreciation: my new kitchen scale has a single button for both power and tare, and the display shows a little animation for every press. It's a perfect example of <b>feedback</b>: I always know the scale registered my press.</p>",
+"<p>My old one had two identical buttons and no signal at all, so I'd press them repeatedly and never know what happened. Now I can't stop noticing this stuff everywhere.</p>",
+"<p>What have you noticed lately?</p>"
+],
+"comments": [
+{
+"name": "Petra Smith",
+"staff": false,
+"endorsed": false,
+"age": "20h",
+"html": "<p>My stove! The knobs are in the same layout as the burners, so the mapping is obvious. My old stove had a row of knobs and I always turned on the wrong one 🔥</p>",
+"replies": []
+},
+{
+"name": "Wesley Smith",
+"staff": false,
+"endorsed": false,
+"age": "14h",
+"html": "<p>Electric kettles with a light that turns off when the water is done. Simple feedback, and so useful.</p>",
+"replies": []
+},
+{
+"name": "Esme Smith",
+"staff": false,
+"endorsed": false,
+"age": "8h",
+"html": "<p>Counter-example: my washing machine has a dial with 15 positions and half of them are unlabeled icons. Zero discoverability.</p>",
+"replies": [
+{
+"name": "Kofi Smith",
+"staff": false,
+"endorsed": false,
+"age": "2h",
+"html": "<p>Ha, I think everyone has one of those at home.</p>"
+}
+]
+},
+{
+"name": "Tess Smith",
+"staff": false,
+"endorsed": false,
+"age": "2h",
+"html": "<p>Love this thread. Reminds me of the affordance vs signifier discussion from the lectures.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2795,
+"title": "Tools for transcribing and organizing interview notes?",
+"author": {
+"name": "Caleb Smith",
+"staff": false
+},
+"body": [
+"<p>Our team finished three interviews and now we have a pile of audio files and rough notes. What are you using to transcribe them and then pull out themes?</p>",
+"<p>We'd prefer something free or cheap, and we'd like to be able to share the results in one place. Also curious how much people clean up transcripts before analyzing them.</p>"
+],
+"comments": [
+{
+"name": "Arjun Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 9",
+"html": "<p>We used the auto-captions from our video call recordings and fixed errors by hand, which took about 20 minutes per interview. It worked fine for our purposes.</p>",
+"replies": []
+},
+{
+"name": "Olivia Smith",
+"staff": true,
+"endorsed": true,
+"age": "Nov 10",
+"html": "<p>Any tool is fine as long as you keep participant data private and follow the consent you described. For analysis, a shared spreadsheet with one quote per row and a column for codes is usually enough. Don't spend too long polishing transcripts.</p>",
+"replies": []
+},
+{
+"name": "Nina Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 10",
+"html": "<p>We did affinity mapping with sticky notes on a shared whiteboard. Each quote became a note and we grouped them into themes. Very fast with four people.</p>",
+"replies": [
+{
+"name": "Caleb Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 12",
+"html": "<p>Thanks all, we'll use the spreadsheet plus the whiteboard approach.</p>"
+}
+]
+},
+{
+"name": "Rohan Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 12",
+"html": "<p>One tip: transcribe while the interview is fresh, because you'll remember the unclear parts.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2826,
+"title": "Quiz 4: do the optional readings count?",
+"author": {
+"name": "Selma Smith",
+"staff": false
+},
+"body": [
+"<p>Quick one before I plan my weekend: does Quiz 4 include the <b>optional</b> readings for Lessons 3.7–4.1, or only the required ones? I scrolled the megathread but couldn't find it.</p>"
+],
+"comments": []
+},
+{
+"id": 2783,
+"title": "Optional reading for Lesson 3.8: needed for the quiz?",
+"author": {
+"name": "Harriet Smith",
+"staff": false
+},
+"body": [
+"<p>The optional reading for 3.8 is pretty long. Will it show up on a quiz, or is it just there for our own interest?</p>"
+],
+"comments": [
+{
+"name": "Bruno Smith",
+"staff": false,
+"endorsed": false,
+"age": "Nov 6",
+"html": "Following, same question!",
+"replies": []
+},
+{
+"name": "Marcus Smith",
+"staff": true,
+"endorsed": true,
+"age": "Nov 7",
+"html": "<p class=\"hlp\" id=\"pp-opt1\"><span class=\"citedby\">✦ CITED BY ASK ED</span>Quizzes only cover the <b>required</b> readings listed on each quiz page. Optional readings are never quizzed (see Syllabus › Quizzes). They're there for your own interest.</p>",
+"replies": []
+}
+]
+},
+{
+"id": 2830,
+"title": "Are the quizzes curved at all?",
+"author": {
+"name": "Wendell Smith",
+"staff": false
+},
+"body": [
+"<p>My Quiz 3 score was lower than I hoped. Does anyone know if quizzes get curved at the end of the term?</p>"
+],
+"comments": [
+{
+"name": "Paloma Smith",
+"staff": false,
+"endorsed": false,
+"age": "2d",
+"html": "<p class=\"hlp\" id=\"pp-curve1\"><span class=\"citedby\">✦ CITED BY ASK ED</span>I heard from someone who took it last year that there was no curve, but I'm not sure that's still true.</p>",
+"replies": []
+},
+{
+"name": "Quinn Smith",
+"staff": false,
+"endorsed": false,
+"age": "1d",
+"html": "<p>Following, would also like to know.</p>",
+"replies": []
+}
+]
+}
+];
+(function mergeContent(){
+  const C = {}; CONTENT.forEach(c => C[c.id] = c);
+  const att = a => `<p>${a.map(n=>`<span class="att">${/\.apkg$/.test(n)?"🗂":"📄"} ${esc(n)}</span>`).join("")}</p>`;
+  const cm = c => ({by:{name:c.name, staff:!!c.staff}, age:c.age, endorsed:!!c.endorsed, text:c.html, kids:(c.replies&&c.replies.length)?c.replies.map(cm):null});
+  const count = cs => cs.reduce((n,c)=>n+1+(c.kids?c.kids.length:0),0);
+  THREADS.forEach(t => {
+    const c = C[t.id]; if(!c) return;
+    t.title = c.title; t.by = {name:c.author.name, staff:!!c.author.staff};
+    t.body = c.body.map(b => typeof b==="string" ? b : b.pid ? p(b.pid, b.html) : b.attachments ? att(b.attachments) : "").join("");
+    t.comments = c.comments.map(cm);
+    t.com = Math.max(t.com||0, count(t.comments));
+  });
+})();
+const byId = {}; THREADS.forEach(t => byId[t.id] = t);
+
+const DOCS = {
+ syllabus: {crumb:"Canvas › CS6750 › Syllabus", title:"Syllabus: Quizzes", sub:"Course page · updated Aug 17",
+  html:`${p("syl1",`<b>Quizzes.</b> There are several short quizzes across the semester. Each quiz covers <b>only the required readings</b> listed on its quiz page; optional readings are never quizzed.`)}
+   ${p("syl2",`Quizzes are taken on Canvas, are <b>open-notes</b>, timed, and allow <b>one attempt</b>. Collaboration during a quiz is not allowed.`)}
+   <p>Quiz windows open on Monday and close the following Sunday at 11:59 pm Anywhere on Earth (AoE).</p>`},
+ quiz4: {crumb:"Canvas › CS6750 › Quizzes › Quiz 4", title:"Quiz 4: Description & Readings", sub:"Course page · updated Nov 14 by Helen Smith",
+  html:`${p("q4a",`<b>Window:</b> opens Monday, November 30; closes Sunday, December 6 at 11:59 pm AoE.`)}
+   ${p("q4b",`<b>Format:</b> 10 multiple-choice questions, 30 minutes, one attempt, open notes.`)}
+   <h3>Required readings (these are the only ones quizzed)</h3>
+   <table><tr><th>Lesson</th><th>Topic</th><th>Reading</th></tr>
+   <tr><td>3.7</td><td>HCI and Agile Development</td><td>Required reading 3.7 (linked in Lessons)</td></tr>
+   <tr><td>3.8</td><td>Conclusion to Research Methods</td><td>Required reading 3.8 (linked in Lessons)</td></tr>
+   <tr><td>4.1</td><td>Applications: Technology</td><td>Required reading 4.1 (linked in Lessons)</td></tr></table>
+   ${p("q4c",`Optional readings and the lecture videos' "Exploring HCI" segments are <b>not</b> part of Quiz 4.`)}`},
+ schedule: {crumb:"Canvas › CS6750 › Course Schedule", title:"Course Schedule: Weeks 14–15", sub:"Course page · updated Nov 2 by Helen Smith",
+  html:`${p("sch1",`<b>Week 14 (Nov 30 – Dec 6):</b> Quiz 4 window. Team project work continues.`)}<p><b>Week 15 (Dec 7 – Dec 13):</b> Team project final push; no quiz.</p>`}
+};
+
+/* ===================== HELPERS ===================== */
+const $ = (s, r=document) => r.querySelector(s);
+const PAL = ["#e8590c","#1971c2","#2f9e44","#ae3ec9","#f08c00","#0c8599","#c2255c","#5f3dc4","#d6336c","#495057"];
+function avColor(name){ let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))>>>0; return PAL[h%PAL.length]; }
+function avatar(person, sm){ const anon = person.name.startsWith("Anonymous");
+  return `<div class="av${sm?" sm":""}" style="background:${anon?"#c9c9c9":avColor(person.name)}">${anon?"":esc(person.name[0])}</div>`; }
+const ICON = {
+  post:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M7 10h10M7 14h6"/></svg>`,
+  q:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.4M12 17h.01"/></svg>`,
+  ann:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11v2l13 5V6L3 11zM16 9h3M16 15h3"/></svg>`,
+  pin:`<svg class="pin" width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3l7 7-3 1-4 4 1 5-2 1-4-5-5 5-1-1 5-5-5-4 1-2 5 1 4-4z"/></svg>`,
+  tick:`<svg class="tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>`,
+  com:`<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v12H8l-4 4z"/></svg>`,
+  heart:`<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8-5.3-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.7-8 11-8 11z"/></svg>`,
+  heartO:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20s-7.5-5-7.5-10.3A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 7.5 2.4C19.5 15 12 20 12 20z"/></svg>`,
+  ext:`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg>`,
+  check:`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l5 5 9-10"/></svg>`,
+  chev:`<svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m9 6 6 6-6 6"/></svg>`,
+  spark:`<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8zM18 12l1 2.6 2.6 1-2.6 1L18 19l-1-2.4-2.6-1 2.6-1z"/></svg>`,
+  up:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10v11H3V10h4zm0 0 5-8c1.7 0 3 1.3 3 3v4h5a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 18.6 21H7"/></svg>`,
+  down:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 14V3h4v11h-4zm0 0-5 8c-1.7 0-3-1.3-3-3v-4H4a2 2 0 0 1-2-2.3l1.4-8A2 2 0 0 1 5.4 3H17"/></svg>`,
+  copy:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>`,
+  cal:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`,
+  book:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-6a3 3 0 0 0-3 3"/><path d="M20 4v14h-7"/></svg>`,
+  cluster:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M6.5 7.3l3.6 3.2M17.5 7.3l-3.6 3.2M6.5 16.7l3.6-3.2M17.5 16.7l-3.6-3.2"/></svg>`,
+  clock:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+  doc:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>`
+};
+let toastT;
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ===================== STATE ===================== */
+const state = { cat:null, q:"", showMore:false, open:null, read:new Set(), busy:false, tasks:new Set(), view:"home", history:[], cur:null, gen:0,
+  filter:null, ret:null, retDraft:null, paneRef:null, star:new Set(), watch:new Set(), liked:new Set(), linked:false, notified:false, daily:false,
+  marked:[], draft:null, fast:false, nudged:false, pseq:null, lastKey:null, dupIdx:-1, pid:"" };
+/* URL flags for evaluation sessions: ?study=1 hides suggested questions, ?panel=closed starts collapsed, ?ask=off = plain-Ed baseline */
+const FLAGS = new URLSearchParams(location.search);
+const STUDY = FLAGS.get("study")==="1", PANEL_CLOSED = FLAGS.get("panel")==="closed", ASK_OFF = FLAGS.get("ask")==="off";
+/* Session log (kept in memory; "Download log" in the task card saves it as JSON) */
+let LOG = [], T0 = Date.now();
+function log(type, data){ LOG.push(Object.assign({t:+((Date.now()-T0)/1000).toFixed(1), type}, data||{})); }
+
+/* ===================== SIDEBAR ===================== */
+function renderCats(){
+  $("#cats").innerHTML = CATS.map(([n,c]) => `<button class="cat${state.cat===n?" on":""}" data-cat="${esc(n)}"><i style="background:${c}"></i>${esc(n)}</button>`).join("");
+}
+$("#cats").addEventListener("click", e => {
+  const b = e.target.closest(".cat"); if(!b) return;
+  state.cat = state.cat===b.dataset.cat ? null : b.dataset.cat; renderCats(); renderList();
+});
+
+/* ===================== THREAD LIST ===================== */
+function itemStatus(t){ if(t.type!=="q" && !(t.comments||[]).length) return {k:"post", text:plain(t.body)}; return bestReply(t); }
+function firstSentence(x){ const m = x.match(/^(.{20,150}?[.!?])(\s|$)/); return m ? m[1] : (x.length>130 ? x.slice(0,128)+"…" : x); }
+function itemHTML(t, withStatus){
+  const c = CAT[t.cat];
+  const short = t.cat.length>22 ? t.cat.slice(0,20)+"…" : t.cat;
+  let l3 = "";
+  if(withStatus){ const r = itemStatus(t); l3 = `<div class="l3">${statusTag(r.k)}<span>${esc(firstSentence(r.text))}</span></div>`; }
+  return `<button class="item${state.open===t.id?" on":""}" data-id="${t.id}">
+    <div class="l1"><span class="dot${state.read.has(t.id)?" read":""}"></span>${ICON[t.type]}<span class="ti">${esc(t.title)}</span>${t.answered?ICON.tick:""}${t.grp.startsWith("pin")?ICON.pin:""}</div>
+    <div class="l2"><span class="c" style="color:${c.text}">${esc(short)}</span><span class="au">${esc(t.by.name)}</span>${t.by.staff?'<span class="staff">STAFF</span>':""}<span>${esc(t.age)}</span>
+      <span class="r"><span>${ICON.com}${t.com}${t.newc?` <span class="new">(${t.newc} new)</span>`:""}${t.unres?` <span class="new">(${t.unres} unresolved)</span>`:""}</span>${t.likes?`<span>${ICON.heart}${t.likes}</span>`:""}</span></div>${l3}
+  </button>`;
+}
+function passFilter(t){
+  const f = state.filter; if(!f) return true;
+  const k = itemStatus(t).k;
+  if(f==="staff") return k==="staff" || k==="ok";
+  if(f==="none") return k==="none";
+  if(f==="unread") return !state.read.has(t.id);
+  return true;
+}
+const matchesQ = (t,q) => !q || (t.title+" "+t.cat).toLowerCase().includes(q.toLowerCase());
+function filteredThreads(){ const q = state.q.trim(); return THREADS.filter(t => (!state.cat || t.cat===state.cat) && matchesQ(t,q) && passFilter(t)); }
+const FILTERS = {staff:"Staff answered", none:"Unanswered", unread:"Unread"};
+const BRIDGE = {weekly:"the pinned weekly threads", materials:"3 student threads", scope:"the Quiz 4 page and Syllabus", cluster:"3 matching threads and the Syllabus", missed:"your updates since Friday", curve:"course pages (no official answer exists)", clarify:"after checking what you mean"};
+function renderList(){
+  const q = state.q.trim();
+  const ts = filteredThreads();
+  let h = "";
+  if(state.cat || q || state.filter){
+    if(q){
+      const nStaff = THREADS.filter(t => (!state.cat || t.cat===state.cat) && matchesQ(t,q) && ["staff","ok"].includes(itemStatus(t).k)).length;
+      h += `<div class="reshead"><span>${ts.length} result${ts.length===1?"":"s"}</span><button class="chipb${state.filter==="staff"?" on":""}" data-staffonly>${state.filter==="staff"?"✓ ":""}Staff answered (${nStaff})</button></div>`;
+    }
+    h += ts.length ? ts.map(t=>itemHTML(t, !!q)).join("")
+      : `<div class="nores">No threads match.<div>Try: <button data-open3="2801">Quiz 4 Megathread</button> · <button data-open3="2790">Team project FAQ</button></div></div>`;
+  } else {
+    const pin = ts.filter(t=>t.grp==="pin"), more = ts.filter(t=>t.grp==="pinmore");
+    h += pin.map(t=>itemHTML(t)).join("");
+    if(state.showMore) h += more.map(t=>itemHTML(t)).join("");
+    h += `<button class="more" id="showMore">${state.showMore?"Show less":"Show "+more.length+" more"}</button>`;
+    h += `<div class="group">This Week</div>` + ts.filter(t=>t.grp==="week").map(t=>itemHTML(t)).join("");
+    h += `<div class="group">Last Week</div>` + ts.filter(t=>t.grp==="last").map(t=>itemHTML(t)).join("");
+  }
+  $("#list").innerHTML = h;
+  $("#fActive").innerHTML = state.filter ? `<button class="fpill" data-fclear title="Clear filter">${FILTERS[state.filter]} ×</button>` : "";
+  const bridge = $("#askBridge");
+  if(q){
+    const k = route(q); bridge.classList.add("show");
+    bridge.innerHTML = `${ICON.spark}<span>${ts.length?"Not finding it?":"Nothing here."} <b>Ask Ed</b>: “${esc(q)}”<small>${k?`Ask Ed can answer this from ${BRIDGE[k]}.`:"No reliable match: Ask Ed won't guess, but will show the closest threads."}${ts.length?"":" Press Enter to ask."}</small></span>`;
+  } else bridge.classList.remove("show");
+}
+$("#list").addEventListener("click", e => {
+  if(e.target.closest("#showMore")){ state.showMore=!state.showMore; renderList(); return; }
+  if(e.target.closest("[data-staffonly]")){ state.filter = state.filter==="staff" ? null : "staff"; renderList(); log("filter",{f:state.filter, via:"results"}); return; }
+  const o3 = e.target.closest("[data-open3]"); if(o3){ state.ret=null; openThread(+o3.dataset.open3); log("open",{ref:"t:"+o3.dataset.open3, via:"no-results"}); return; }
+  const it = e.target.closest(".item"); if(it){ state.ret=null; state.retDraft=null; openThread(+it.dataset.id); log("open",{ref:"t:"+it.dataset.id, via:"list"}); }
+});
+$("#q").addEventListener("input", e => { state.q = e.target.value; state.ret = null; renderList(); });
+$("#q").addEventListener("keydown", e => {
+  if(e.key==="Enter" && state.q.trim() && !filteredThreads().length && !ASK_OFF){ log("bridge",{q:state.q, via:"enter"}); openChat(); ask(state.q.trim()); }
+});
+$("#askBridge").addEventListener("click", () => { log("bridge",{q:state.q, via:"click"}); openChat(); ask(state.q.trim()); });
+$(".filterbar").addEventListener("click", e => {
+  if(e.target.closest("[data-fclear]")){ state.filter=null; renderList(); return; }
+  if(e.target.closest("#filterBtn")){ const m=$("#fmenu"); m.hidden=!m.hidden; return; }
+  const o = e.target.closest("[data-f]"); if(o){ state.filter = o.dataset.f || null; $("#fmenu").hidden = true; renderList(); log("filter",{f:state.filter, via:"menu"}); }
+});
+document.addEventListener("click", e => { const m=$("#fmenu"); if(m && !m.hidden && !e.target.closest(".filterbar")) m.hidden = true; });
+
+function revealInList(id){
+  const t = byId[id]; if(!t) return;
+  const visible = filteredThreads().some(x=>x.id===id);
+  if((state.q.trim() || state.cat || state.filter) && !visible){
+    state.ret = {q:state.q, cat:state.cat, filter:state.filter, scroll:$("#listScroll").scrollTop};
+    state.q=""; $("#q").value=""; state.cat=null; state.filter=null; renderCats();
+  }
+  if(!state.q.trim() && !state.cat && !state.filter && t.grp==="pinmore") state.showMore = true;
+  renderList();
+  const el = $(`.item[data-id="${id}"]`);
+  if(el){ el.scrollIntoView({block:"center",behavior:"smooth"}); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+}
+function backToResults(){
+  const r = state.ret; if(!r) return;
+  state.q=r.q; $("#q").value=r.q; state.cat=r.cat; state.filter=r.filter; state.ret=null;
+  renderCats(); renderList(); $("#listScroll").scrollTop = r.scroll;
+  const nb=$("#pane [data-backres]"); if(nb) nb.remove();
+}
+
+/* ===================== THREAD PANE ===================== */
+function emptyPane(){
+  state.paneRef = null;
+  $("#app").classList.remove("has-thread");
+  $("#pane").innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 3h15v11H7l-5 4V3zm17 4h3v14l-4-3H8v-2h11V7z"/></svg>Select a thread</div>`;
+}
+function commentHTML(c){
+  return `<div class="cmt">${avatar(c.by,true)}<div class="cb">
+    <div class="ch"><span class="n">${esc(c.by.name)}</span>${c.by.staff?'<span class="staff">STAFF</span> ':""}${c.endorsed?'<span class="endorsed">ENDORSED</span> ':""}${esc(c.age)}</div>
+    <div class="cx">${c.text.startsWith("<")?c.text:`<p>${c.text}</p>`}</div>
+    <div class="ca"><span>♡ Reply</span><span>···</span></div>
+    ${c.kids?`<div class="kids">${c.kids.map(commentHTML).join("")}</div>`:""}
+  </div></div>`;
+}
+function navRow(nav){
+  nav = nav || {}; const b = [];
+  if(state.ret) b.push(`<button class="navb" data-backres>‹ Back to results${state.ret.q.trim()?` for “${esc(state.ret.q.trim())}”`:state.ret.cat?` in ${esc(state.ret.cat)}`:""}</button>`);
+  if(nav.back){ const [k,i] = nav.back.split(":"); const lab = k==="t" ? "#"+i : (DOCS[i] ? DOCS[i].title : "previous page"); b.push(`<button class="navb" data-backprev="${nav.back}">‹ Back to ${esc(lab)}</button>`); }
+  if(nav.retq && state.retDraft!=null) b.push(`<button class="navb" data-retq>‹ Return to my question</button>`);
+  if(nav.draft && state.draft) b.push(`<button class="navb" data-backdraft>‹ Back to my draft</button>`);
+  return b.length ? `<div class="navrow">${b.join("")}</div>` : "";
+}
+function openThread(id, passage, nav){
+  const t = byId[id]; if(!t) return;
+  state.open = id; state.paneRef = "t:"+id; state.read.add(id);
+  const c = CAT[t.cat];
+  const isQ = t.type==="q";
+  const disc = isQ
+    ? `<div class="answers-h">${t.comments.length} Answer${t.comments.length===1?"":"s"}</div>${t.comments.map(commentHTML).join("")}
+       <div class="youranswer"><h4>Your Answer</h4><div class="editor"><div class="tb">Paragraph ⌄ &nbsp;<b>B</b><i>I</i><u>U</u> ⟨⟩ 🔗 ☰ ⋯</div></div><button class="post">Post</button><div style="clear:both"></div></div>`
+    : `<div class="sortrow">Sort by Newest ▾</div><div class="addc">💬 Add comment</div>${t.comments.map(commentHTML).join("")}`;
+  const linked = state.linked && (id===2799 || id===2826);
+  const banner = linked ? `<div class="linkban">${ICON.check}<span><b>Staff already answered this</b> in #2783: “Quizzes only cover the required readings…”</span><button data-open2="t:2783:opt1">Open answer ›</button></div>` : "";
+  const note = state.notified && (id===2799 || id===2826) ? `<div class="sysnote">${ICON.spark} You pointed ${id===2826?"Selma":"Diego"} Smith to the staff answer in #2783.</div>` : "";
+  const liked = state.liked.has(id), star = state.star.has(id), watch = state.watch.has(id);
+  $("#app").classList.add("has-thread");
+  $("#pane").innerHTML = `<article class="thread">
+    <button class="pane-back" data-paneback>‹ All threads</button>
+    ${navRow(nav)}
+    <h1 class="t-title">${esc(t.title)} <small>#${t.id}</small></h1>
+    <div class="t-meta">${avatar(t.by)}<div class="who"><span class="n">${esc(t.by.name)}</span> ${t.by.staff?'<span class="staff">STAFF</span>':""}<div class="s">${esc(t.when)} in <span style="color:${c.text}">${esc(t.cat)}</span></div></div>
+      <div class="t-stats">${t.grp.startsWith("pin")?`<div class="pinned">${ICON.pin}PINNED</div>`:""}<button class="tst${star?" on":""}" data-star>★<span>${star?"STARRED":"STAR"}</span></button><button class="tst${watch?" on":""}" data-watch>👁<span>${watch?"WATCHING":"WATCH"}</span></button><div><b>${t.views}</b>VIEWS</div></div></div>
+    ${banner}
+    <div class="t-body"><button class="likecol${liked?" on":""}" data-like aria-label="Like">${ICON.heartO}<span>${t.likes+(liked?1:0)}</span></button><div class="prose">${t.body}
+      ${t.approved?`<p>${statusBadge("ok")}</p>`:""}
+      <div class="actions"><span>Comment</span><span>···</span></div></div></div>
+    ${note}
+    ${disc}
+  </article>`;
+  $("#pane").scrollTop = 0;
+  document.querySelectorAll(".item.on").forEach(e=>e.classList.remove("on"));
+  const it = $(`.item[data-id="${id}"]`); if(it){ it.classList.add("on"); const d=it.querySelector(".dot"); if(d) d.classList.add("read"); }
+  updateCounts(); checkTasks("t", id);
+  if(passage) highlight(passage);
+}
+function openDoc(key, passage, nav){
+  const d = DOCS[key]; if(!d) return;
+  state.open = null; state.paneRef = "d:"+key;
+  document.querySelectorAll(".item.on").forEach(e=>e.classList.remove("on"));
+  $("#app").classList.add("has-thread");
+  $("#pane").innerHTML = `<article class="thread doc">
+    <button class="pane-back" data-paneback>‹ All threads</button>
+    ${navRow(nav)}
+    <div class="docbar"><span class="k">COURSE PAGE</span><span>${esc(d.crumb)}</span><button data-canvas>Open in Canvas ${ICON.ext}</button></div>
+    <h1>${esc(d.title)}</h1><div class="sub">${esc(d.sub)}</div><div class="prose">${d.html}</div></article>`;
+  $("#pane").scrollTop = 0;
+  checkTasks("d", key);
+  if(passage) highlight(passage);
+}
+/* Cited passages stay highlighted until another source opens or the × is clicked. */
+function highlight(pid){
+  const el = document.getElementById("pp-"+pid); if(!el) return;
+  document.querySelectorAll(".hlp.hl").forEach(x=>{ if(x!==el) x.classList.remove("hl"); });
+  const cb = el.querySelector(".citedby"); if(cb && !cb.querySelector("[data-hlx]")) cb.insertAdjacentHTML("beforeend", ` <button class="hlx" data-hlx title="Remove highlight">×</button>`);
+  setTimeout(()=>{ el.scrollIntoView({block:"center",behavior:"smooth"}); el.classList.add("hl"); }, 60);
+}
+function seqLabel(){
+  const ps = state.pseq; if(!ps) return;
+  const pid = ps.refs[ps.i].split(":")[2]; const el = document.getElementById("pp-"+pid); if(!el) return;
+  const cb = el.querySelector(".citedby");
+  if(cb) cb.innerHTML = `✦ CITED BY ASK ED · Passage ${ps.i+1} of ${ps.refs.length} <button class="nextp" data-nextp>Next ›</button> <button class="hlx" data-hlx title="Remove highlight">×</button>`;
+}
+function nextPassage(){ const ps = state.pseq; if(!ps) return; ps.i = (ps.i+1) % ps.refs.length; highlight(ps.refs[ps.i].split(":")[2]); seqLabel(); }
+function toggleIn(set, id){ if(set.has(id)) set.delete(id); else set.add(id); return set.has(id); }
+$("#pane").addEventListener("click", e => {
+  const g = sel => e.target.closest(sel);
+  if(g("[data-paneback]")){ state.open=null; emptyPane(); document.querySelectorAll(".item.on").forEach(x=>x.classList.remove("on")); return; }
+  if(g("[data-canvas]")){ toast("In the live version this opens the page in Canvas. Here it is previewed inside Ed."); return; }
+  if(g("[data-hlx]")){ const h=g(".hlp"); if(h) h.classList.remove("hl"); return; }
+  if(g("[data-nextp]")){ nextPassage(); return; }
+  const o2 = g("[data-open2]"); if(o2){ openSource(o2.dataset.open2, null, "banner"); return; }
+  if(g("[data-backres]")){ backToResults(); return; }
+  const bp = g("[data-backprev]"); if(bp){ openSource(bp.dataset.backprev, null, "back"); return; }
+  if(g("[data-retq]")){ const d = state.retDraft; state.retDraft = null; openChat(); if(d!=null) ci.value = d; ci.focus(); updateSend(); showDups(); g("[data-retq]").remove(); return; }
+  if(g("[data-backdraft]")){ openCompose(); return; }
+  const cd = g("[data-cdup]"); if(cd){ const id=cd.dataset.cdup; log("open",{ref:"t:"+id, via:"new-thread-duplicate"}); openSource("t:"+id+(id==="2783"?":opt1":""), null, "draft"); return; }
+  if(g("[data-cpost]")){ log("post_attempt",{title:state.draft&&state.draft.title}); toast("Posting is turned off in this prototype. Your draft is kept."); return; }
+  if(g("[data-cdiscard]")){ state.draft=null; emptyPane(); toast("Draft discarded."); return; }
+  const ct = g("[data-ctype]"); if(ct){ state.draft.type = ct.dataset.ctype; openCompose(); return; }
+  const st = g("[data-star]"); if(st){ const on = toggleIn(state.star, state.open); st.classList.toggle("on",on); st.querySelector("span").textContent = on?"STARRED":"STAR"; toast(on?"Starred: you'll find it under Starred threads.":"Unstarred."); return; }
+  const wa = g("[data-watch]"); if(wa){ const on = toggleIn(state.watch, state.open); wa.classList.toggle("on",on); wa.querySelector("span").textContent = on?"WATCHING":"WATCH"; toast(on?"Watching: you'll be notified about new replies.":"Stopped watching."); return; }
+  const lk = g("[data-like]"); if(lk){ const t = byId[state.open]; const on = toggleIn(state.liked, state.open); lk.classList.toggle("on",on); lk.querySelector("span").textContent = t.likes+(on?1:0); return; }
+});
+/* New Thread form with duplicate suggestions under the title */
+function openCompose(pre){
+  if(pre) state.draft = {title:pre.title||"", body:pre.body||"", cat:pre.cat||"Class Discussion", type:"q"};
+  if(!state.draft) state.draft = {title:"", body:"", cat:"Class Discussion", type:"q"};
+  const d = state.draft;
+  if(window.innerWidth <= 760 && !$("#app").classList.contains("chat-off")) toggleChat();
+  state.open = null; state.paneRef = "compose"; document.querySelectorAll(".item.on").forEach(x=>x.classList.remove("on"));
+  $("#app").classList.add("has-thread");
+  $("#pane").innerHTML = `<article class="thread compose">
+    <button class="pane-back" data-paneback>‹ All threads</button>
+    <h1 class="t-title">New Thread</h1>
+    <div class="cform">
+      <div class="ctype"><button data-ctype="q" class="${d.type==="q"?"on":""}">Question</button><button data-ctype="post" class="${d.type==="post"?"on":""}">Post</button></div>
+      <input id="cTitle" placeholder="Title, e.g. Are optional readings on Quiz 4?" value="${esc(d.title)}" autocomplete="off">
+      <div id="cDups"></div>
+      <select id="cCat">${CATS.map(([n])=>`<option${n===d.cat?" selected":""}>${esc(n)}</option>`).join("")}</select>
+      <textarea id="cBody" placeholder="Write your ${d.type==="q"?"question":"post"}…">${esc(d.body)}</textarea>
+      <div class="cbtns"><button class="post" data-cpost>Post</button><button class="cdisc" data-cdiscard>Discard draft</button></div>
+    </div></article>`;
+  const ti = $("#cTitle"), bo = $("#cBody");
+  ti.addEventListener("input", () => { d.title = ti.value; renderComposeDups(); });
+  bo.addEventListener("input", () => { d.body = bo.value; renderComposeDups(); });
+  $("#cCat").addEventListener("change", e => { d.cat = e.target.value; });
+  renderComposeDups(); ti.focus(); ti.setSelectionRange(ti.value.length, ti.value.length);
+}
+function renderComposeDups(){
+  const box = $("#cDups"); if(!box || !state.draft) return;
+  const q = state.draft.title+" "+state.draft.body;
+  const res = matchThreads(q);
+  if(!res.length || !state.draft.title.trim()){ box.innerHTML = ""; return; }
+  box.innerHTML = `<div class="cdups"><div class="dup-h">${ICON.cluster} SIMILAR QUESTIONS ALREADY ON ED · ${Math.min(3,res.length)}</div>${dupRowsHTML(res.slice(0,3), "data-cdup")}<div class="dup-f">Open one to check it. Your draft is kept.</div></div>`;
+  log("dup_shown",{where:"new-thread", ids:res.slice(0,3).map(x=>x.t.id)});
+}
+
+/* ===================== CHAT ===================== */
+const SUGG = [
+  {k:"weekly",    icon:ICON.cal,  q:"Where is this week's discussion?",                       d:"Finds the current weekly threads"},
+  {k:"materials", icon:ICON.book, q:"Has anyone shared study material for Quiz 4?",           d:"Ranks student threads with summaries"},
+  {k:"scope",     icon:ICON.doc,  q:"What's the scope of Quiz 4?",                             d:"Answers from the syllabus and quiz page"},
+  {k:"cluster",   icon:ICON.cluster, q:"Has anyone asked if optional readings are on the quiz?", d:"Groups every thread asking the same thing"},
+  {k:"missed",    icon:ICON.clock, q:"What did I miss since my last visit?",                  d:"Short summary of new posts and answers"},
+  {k:"curve",     icon:ICON.doc,   q:"Will Quiz 4 be curved?",                                d:"A question with no official answer"}
+];
+/* Ask Ed navigation: home screen <-> conversations; conversations are kept in "Recent". */
+function saveConv(){
+  if(state.view!=="chat") return;
+  const html = $("#chatScroll").innerHTML;
+  if(state.cur!=null) state.history[state.cur].html = html;
+  else { const u = $("#chatScroll .msg-u div"); state.history.unshift({title: u ? u.textContent : "Question", html, n:0}); }
+}
+function setHeader(){
+  const chat = state.view==="chat";
+  $("#chatBack").hidden = !chat;
+  const u = chat && $("#chatScroll .msg-u div");
+  $("#chatCrumb").textContent = u ? "/ " + u.textContent : "";
+}
+function goHome(){
+  cancelRun();
+  saveConv(); state.view = "home"; state.cur = null;
+  welcome(); setHeader(); $("#chatScroll").scrollTop = 0;
+}
+function openConv(i){
+  cancelRun();
+  const h = state.history[i]; if(!h) return;
+  state.view = "chat"; state.cur = i;
+  $("#chatScroll").innerHTML = h.html; setHeader(); $("#chatScroll").scrollTop = 0;
+}
+const MISSED_IDS = [];
+function missedLeft(){ return MISSED_IDS.filter(id=>!state.read.has(id)).length; }
+function missedCardHTML(){
+  if(!missedLeft()) return `<div class="missed-card done"><div class="mh">${ICON.check} You're caught up since Fri 6:00 pm<span class="when"><button data-k="missed">Show again</button></span></div>${state.daily?`<div class="daily">Daily summary: on (sample)</div>`:""}</div>`;
+  const b = (ref,html) => { const id=+ref.split(":")[1]; return `<button data-open="${ref}" class="${state.read.has(id)?"readd":""}">${html}</button>`; };
+  return `<div class="missed-card"><div class="mh">${ICON.clock} What you missed<span class="when">since Fri 6:00 pm</span></div>
+      <ul><li>${b("t:2847:sg2","Anika's <b>Quiz 4 study pack</b>, staff-endorsed")}</li><li>${b("t:2842:app1","Staff answered the <b>appendix page-limit</b> question")}</li><li>${b("t:2849:fh13","Friday Humor is up")} · ${b("t:2851","Team Lantern needs testers")}</li></ul>
+      <button class="go" data-k="missed">Show summary</button>${state.daily?`<div class="daily">Daily summary: on (sample)</div>`:""}</div>`;
+}
+function updateCounts(){
+  $("#unreadCount").textContent = Math.max(0, 1164 - state.read.size);
+  const n = missedLeft(), rb = $('#rail [data-rail="missed"]'); let b = $("#railBadge");
+  if(n>0){ if(!b){ rb.insertAdjacentHTML("beforeend",'<span class="bd" id="railBadge"></span>'); b=$("#railBadge"); } b.textContent = n; } else if(b) b.remove();
+  const mc = $("#chatScroll .welcome .missed-card"); if(mc) mc.outerHTML = missedCardHTML();
+}
+function welcome(){
+  const rec = state.history.length ? `<div class="recent"><div class="sugg-l">YOUR RECENT QUESTIONS</div>${state.history.map((h,i)=>{const n=(h.html.match(/class="msg-u"/g)||[]).length;return `<button class="rec" data-conv="${i}">${ICON.clock}<span class="x">${esc(h.title)}</span><span class="m">${n>1?n+" questions":"1 question"}</span></button>`}).join("")}</div>` : "";
+  const tryAsk = STUDY
+    ? `<div class="sugg-l" style="margin-top:16px">ASK IN YOUR OWN WORDS</div><div class="hints">Ask Ed can find threads, check course rules on official pages, group questions that were already asked, and summarise what you missed.</div>`
+    : `<div class="sugg-l" style="margin-top:16px">TRY ASKING</div>${SUGG.filter(s=>s.k!=="missed" && s.k!=="curve").map(s=>`<button class="sugg" data-k="${s.k}"><span class="si">${s.icon}</span><span><b>${esc(s.q)}</b><span>${esc(s.d)}</span></span></button>`).join("")}`;
+  $("#chatScroll").innerHTML = `<div class="welcome">
+    <div class="big">${ICON.spark.replace('width="11" height="11"','width="20" height="20"')}</div>
+    <h2>Ask anything about CS6750</h2>
+    <p>Ed reads the course's threads and pages, answers in plain words and links every source so you can check it.</p>
+    ${missedCardHTML()}
+    ${rec}
+    ${tryAsk}
+  </div>`;
+}
+function viaOf(el){ return el.classList.contains("cite")?"citation":el.classList.contains("src")?"source-card":el.closest(".digest")?"digest":el.closest(".missed-card")?"home-missed":el.classList.contains("weekrow")?"week-row":el.classList.contains("crow2")?"cluster-row":el.closest(".cluster")?"cluster-graph":"chat"; }
+$("#chatScroll").addEventListener("click", e => {
+  const g = sel => e.target.closest(sel);
+  const cv = g("[data-conv]"); if(cv){ openConv(+cv.dataset.conv); return; }
+  if(g("[data-skip]")){ state.fast = true; if(state.wake) state.wake(); log("skip",{}); return; }
+  const tz = g("[data-tz]"); if(tz){ tz.closest(".tzline").innerHTML = tzHTML(tz.dataset.tz); return; }
+  const s = g(".sugg, .follow button[data-k], .missed-card [data-k], .interp button[data-k]");
+  if(s){ const sg = SUGG.find(x=>x.k===s.dataset.k); if(sg){ log("chip",{k:sg.k}); ask(sg.q, sg.k); } return; }
+  const c = g("[data-open]");
+  if(c){
+    $("#chatScroll").querySelectorAll(".active").forEach(x=>x.classList.remove("active"));
+    c.classList.add("active","visited");
+    const via = viaOf(c);
+    if(via==="digest" || via==="home-missed") doneTask("missed");
+    openSource(c.dataset.open, c, via); return;
+  }
+  const st = g(".steps-t"); if(st){ st.parentElement.classList.toggle("open"); return; }
+  const fb = g("[data-fb]"); if(fb){
+    fb.parentElement.querySelectorAll("[data-fb]").forEach(b=>b.classList.remove("sel")); fb.classList.add("sel");
+    log("feedback",{v:fb.dataset.fb});
+    toast(fb.dataset.fb==="up" ? "Thanks! Marked as helpful." : "Thanks. We'll use this to improve answers.");
+    return; }
+  const cp = g("[data-copy]"); if(cp){ copyAnswer(cp.closest(".msg-a")); return; }
+});
+function openSource(ref, el, via){
+  // Small windows can't show the chat and a thread side by side: collapse chat to the rail so the thread is visible.
+  if(window.innerWidth <= 760 && !$("#app").classList.contains("chat-off")) toggleChat();
+  // ref formats: "t:2847:sg1" (thread + passage) or "d:quiz4:q4a" (course page + passage)
+  const [kind, id, pass] = ref.split(":");
+  const cur = state.paneRef, same = cur && cur.split(":").slice(0,2).join(":")===kind+":"+id;
+  const nav = {back: (cur && !same && cur!=="compose" && via!=="back") ? cur : null, retq: via==="dup", draft: via==="draft"};
+  if(via!=="dup") state.retDraft = null;
+  state.pseq = null;
+  if(el && kind==="t" && el.classList.contains("cite")){
+    const msg = el.closest(".msg-a");
+    if(msg){ const refs = [...new Set([...msg.querySelectorAll(`.cite[data-open^="t:${id}:"]`)].map(x=>x.dataset.open))]; if(refs.length>1) state.pseq = {refs, i:Math.max(0, refs.indexOf(ref))}; }
+  }
+  if(kind==="t"){ revealInList(+id); openThread(+id, pass, nav); } else openDoc(id, pass, nav);
+  if(state.pseq) setTimeout(seqLabel, 80);
+  log("open",{ref, via:via||"chat"});
+}
+function copyAnswer(msg){
+  const ans = msg && msg.querySelector(".ans"); if(!ans) return;
+  const srcs = [...msg.querySelectorAll(".src")].map((x,i)=>{ const r = x.dataset.open.split(":"); return `${i+1}. ${x.querySelector(".tt").textContent}${r[0]==="t" ? " (Ed #"+r[1]+")" : " (Canvas course page)"}`; });
+  const text = ans.innerText.replace(/\n{3,}/g,"\n\n").trim() + (srcs.length ? "\n\nSources:\n"+srcs.join("\n") : "");
+  const ok = () => toast(`Copied the answer${srcs.length?` and ${srcs.length} source link${srcs.length>1?"s":""}`:""}.`);
+  const fallback = () => { const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); ok(); }catch(err){ toast("Couldn't copy here. Select the text instead."); } ta.remove(); };
+  try{ navigator.clipboard.writeText(text).then(ok, fallback); }catch(err){ fallback(); }
+  log("copy",{});
+}
+// One status vocabulary everywhere: Staff answer · Staff-endorsed · Students only · Unanswered (+ Official course page, Staff post).
+const STATUS = {staff:["ok","Staff answer"], ok:["ok","Staff-endorsed"], course:["course","Official course page"], no:["no","Students only"], none:["none","Unanswered"], spost:["post","Staff post"], post:["post","Post"]};
+function statusBadge(k){ const [c,l]=STATUS[k]||STATUS.post; return `<span class="badge ${c}">${c==="ok"||c==="course"?ICON.check+" ":""}${l}</span>`; }
+function statusTag(k){ const map={staff:"staff",ok:"staff",course:"course",no:"student",none:"none",spost:"post",post:"post"}; return `<span class="stag ${map[k]||"post"}">${(STATUS[k]||STATUS.post)[1]}</span>`; }
+function cite(n, ref, label){ return `<button class="cite" data-open="${ref}">${n}<span class="tip">${esc(label)}</span></button>`; }
+function srcCard(n, s){
+  return `<button class="src" data-open="${s.ref}">
+    <div class="r1"><span class="rk">${n}</span>${s.course?`<span class="badge course">COURSE PAGE</span>`:`<span class="cn" style="color:${CAT[s.cat].text}">${esc(s.cat)}</span>`}
+      <span class="score" title="Why ranked here: ${s.score>=.85?"it closely matches":"it partly matches"} your question. Similarity ${s.score.toFixed(2)} (embedding cosine).">${s.score>=.85?"Strong match":s.score>=.7?"Good match":"Partial match"}<span class="bar"><i style="width:${Math.round(s.score*100)}%"></i></span></span></div>
+    <div class="tt">${esc(s.title)}</div>
+    <div class="sm"><span class="ai">AI SUMMARY</span>${s.sum}</div>
+    <div class="r3">${statusBadge(s.badge)}
+      <span>${esc(s.meta)}</span><span class="ext">Open ${ICON.ext}</span></div>
+  </button>`;
+}
+
+const SCRIPTS = {
+ weekly: {
+  steps:[["Read your question: you want <b>this week's</b> discussion threads", 220],
+         ["Today is Sat, Nov 21, so it's <b>Week 13</b> (Nov 16 – 22)", 220],
+         ["Found the 5 pinned staff threads for Week 13 <span class=\"tech\">metadata match</span>", 260]],
+  meta:"Checked pinned threads · 3.4 s",
+  answer(){
+    const wk = [["MON",2820],["TUE",2829],["WED",2838],["THU",2845],["FRI",2849]];
+    return `<p>It's <b>Week 13</b> (Nov 16 – 22). The weekly threads are pinned at the top of the list, but most were hidden under <i>Show 7 more</i>, so I expanded it. I opened the newest one, <b>Friday Humor, Week 13</b>, for you ${cite(1,"t:2849:fh13","Friday Humor, Week 13 · #2849")}.</p>
+      <div>${wk.map(([d,id])=>{const t=byId[id];return `<button class="weekrow${id===2849?" cur":""}" data-open="t:${id}"><span class="d">${d}</span><i style="background:${CAT[t.cat].dot}"></i><span class="x">${esc(t.title)}</span><span class="m">${t.com} comments</span></button>`}).join("")}</div>`;
+  },
+  sources:[{ref:"t:2849:fh13",cat:"Friday Humor",title:"Friday Humor, Week 13",score:.97,badge:"spost",sum:"Instructor's weekly prompt asking for funny examples of bad interface design; replies so far cover a parking-garage kiosk, a backwards thermostat dial and a 14-button microwave.",meta:"Helen Smith · Yesterday · "+byId[2849].com+" comments"}],
+  after(){ state.showMore = true; revealInList(2849); openThread(2849, null, {back: state.paneRef && state.paneRef!=="t:2849" && state.paneRef!=="compose" ? state.paneRef : null}); },
+  follow:["materials","scope"]
+ },
+ materials: {
+  steps:[["Read your question <span class=\"tech\">text embedding</span>", 260],
+         ["Looked through all <b>1,164</b> threads and found <b>24</b> possible matches <span class=\"tech\">vector search</span>", 320],
+         ["Kept the <b>3</b> closest, preferring recent and staff-endorsed ones <span class=\"tech\">re-ranking</span>", 300],
+         ["Summarised each thread in a sentence or two <span class=\"tech\">RAG</span>", 280]],
+  meta:"Looked through 1,164 threads · 5.2 s",
+  answer(){
+    return `<p><b>Yes. Two classmates have shared Quiz 4 material, and course staff have approved both.</b></p>
+     <ul>
+      <li><b>Study pack</b> by Anika Smith, in three parts:
+        <ol style="margin:4px 0 0;padding-left:18px">
+          <li>lesson summaries for 3.7, 3.8 and 4.1 ${cite(1,"t:2847:sg1",byId[2847].title+" · #2847")}</li>
+          <li>20 practice questions with an answer key ${cite(1,"t:2847:sg2",byId[2847].title+" · #2847")}</li>
+          <li>a glossary of about 60 terms ${cite(1,"t:2847:sg3",byId[2847].title+" · #2847")}</li>
+        </ol></li>
+      <li><b>Anki flashcard deck</b> by Ben Smith: one deck of about 120 cards covering the required readings for Lessons 3.7–4.1 ${cite(2,"t:2812:anki1",byId[2812].title+" · #2812")}.</li>
+     </ul>
+     <p>A third thread links a Notion page for the whole course, but its Unit 4 part is unfinished and nobody on staff has reviewed it ${cite(3,"t:2805:notion1",byId[2805].title+" · #2805")}.</p>`;
+  },
+  method:true,
+  sources:[
+   {ref:"t:2847:sg2",cat:"Quiz",title:byId[2847].title,score:.91,badge:"ok",sum:"Three-part study pack for Quiz 4: lesson summaries (3.7, 3.8, 4.1), 20 practice multiple-choice questions with answers, and a 60-term glossary.",meta:"Anika Smith · 16h · "+byId[2847].com+" comments · 9 ♥"},
+   {ref:"t:2812:anki1",cat:"Lectures",title:byId[2812].title,score:.88,badge:"ok",sum:"A ~120-card Anki deck covering the Lessons 3.7–4.1 readings; each card cites its page. A TA spot-checked 30 cards.",meta:"Ben Smith · Nov 12 · "+byId[2812].com+" comments · 15 ♥"},
+   {ref:"t:2805:notion1",cat:"Class Discussion",title:byId[2805].title,score:.64,badge:"no",sum:"Whole-course notes in Notion. Units 1–3 are finished; Unit 4 is in progress and may be out of date.",meta:"Carla Smith · Nov 11 · "+byId[2805].com+" comments"}
+  ],
+  follow:["scope","weekly"]
+ },
+ scope: {
+  steps:[["This is a <b>course rule</b> question, so I checked official course pages before student posts", 280],
+         ["Found the <b>Quiz 4</b> page, <b>Syllabus › Quizzes</b> and the <b>Course Schedule</b>", 300],
+         ["Checked the pinned <b>Quiz 4 Megathread</b> (#2801): no staff reply says anything different", 280]],
+  meta:"Checked 3 course pages and 1 staff thread · 4.1 s",
+  answer(){
+    return `<div class="origin">${ICON.book}<span>This answer comes from <b>official course pages</b>, not from student posts.</span></div>
+     <p>Quiz 4 covers <b>only the required readings for Lessons 3.7, 3.8 and 4.1</b> ${cite(1,"d:quiz4:q4c","Quiz 4: Description & Readings")}. Optional readings are never quizzed ${cite(2,"d:syllabus:syl1","Syllabus: Quizzes")}.</p>
+     <dl class="facts">
+      <div><dt>Readings</dt><dd>3.7 HCI and Agile Development · 3.8 Conclusion to Research Methods · 4.1 Applications: Technology ${cite(1,"d:quiz4:q4c","Quiz 4: Description & Readings")}</dd></div>
+      <div><dt>Format</dt><dd>10 multiple-choice questions · 30 min · one attempt · open notes ${cite(1,"d:quiz4:q4b","Quiz 4: Description & Readings")}</dd></div>
+      <div><dt>Window</dt><dd>Mon Nov 30 → Sun Dec 6, 11:59 pm AoE<br><span class="tzline">${tzHTML("local")}</span> ${cite(3,"d:schedule:sch1","Course Schedule: Weeks 14–15")}</dd></div>
+      <div><dt>Rules</dt><dd>No collaboration during the quiz ${cite(2,"d:syllabus:syl2","Syllabus: Quizzes")}</dd></div>
+     </dl>
+     <p>Studying? Classmates have shared <a href="#" data-k="materials" class="jump">approved flashcards and a study pack</a>.</p>`;
+  },
+  sources:[
+   {ref:"d:quiz4:q4a",course:true,title:"Quiz 4: Description & Readings",score:.95,badge:"course",sum:"Official quiz page: window, format and the three required readings (Lessons 3.7, 3.8, 4.1). Optional readings excluded.",meta:"Canvas › Quizzes · updated Nov 14"},
+   {ref:"d:syllabus:syl1",course:true,title:"Syllabus: Quizzes",score:.86,badge:"course",sum:"Course-wide quiz rules: only required readings are quizzed; open-notes, timed, one attempt, no collaboration.",meta:"Canvas › Syllabus · updated Aug 17"},
+   {ref:"d:schedule:sch1",course:true,title:"Course Schedule: Weeks 14–15",score:.71,badge:"course",sum:"Places the Quiz 4 window in Week 14 (Nov 30 – Dec 6).",meta:"Canvas › Schedule · updated Nov 2"}
+  ],
+  follow:["cluster","materials"]
+ },
+ cluster: {
+  steps:[["Compared your question with what every thread asks, not only its title <span class=\"tech\">embeddings</span>", 260],
+         ["Found <b>3 threads</b> in 3 categories asking the same thing <span class=\"tech\">similarity ≥ 0.85</span>", 320],
+         ["Picked the most reliable answer: <b>course page</b> first, then staff, then students", 280]],
+  meta:"Grouped 3 matching threads · 4.1 s",
+  answer(){
+    return `<p><b>Short answer: no, optional readings are not on the quiz.</b> The Syllabus says so ${cite(1,"d:syllabus:syl1","Syllabus: Quizzes")}.</p>
+    <p><b>Yes, it was already asked, 3 times.</b> A TA answered it in one thread ${cite(2,"t:2783:opt1",byId[2783].title+" · #2783")}; the other two never got a staff answer.</p>
+    <div class="cluster">${clusterSVG()}</div>
+    ${[[2783,"staff","t:2783:opt1"],[2799,"no","t:2799"],[2826,"none","t:2826"]].map(([id,k,ref])=>{const t=byId[id];return `<button class="crow2" data-open="${ref}" data-cl="${id}">${statusTag(k)}${state.linked&&id!==2783?'<span class="stag course lk">Linked</span>':""}<span class="x">${esc(t.title)}</span><span class="m">${esc(t.cat)} · ${esc(t.age)}</span></button>`}).join("")}
+    <div class="cl-act"><button data-act="link">${state.linked?"✓ Linked to the staff answer · Undo":"Link to the staff answer"}</button><button data-act="notify">${state.notified?"✓ Selma &amp; Diego pointed to it · Undo":"Point the other askers to it"}</button></div>`;
+  },
+  collapse:true,
+  sources:[
+   {ref:"d:syllabus:syl1",course:true,title:"Syllabus: Quizzes",score:.88,badge:"course",sum:"States that each quiz covers only the required readings on its quiz page; optional readings are never quizzed.",meta:"Canvas › Syllabus · updated Aug 17"},
+   {ref:"t:2783:opt1",cat:"Lectures",title:"Optional reading for Lesson 3.8: needed for the quiz?",score:.93,badge:"staff",sum:"Student asks if the long optional 3.8 reading is quizzed. A TA answers: only required readings are ever quizzed.",meta:"Harriet Smith · Nov 6 · endorsed TA answer"},
+   {ref:"t:2799",cat:"Quiz",title:"Do the optional readings show up on quizzes?",score:.90,badge:"no",sum:"Same question; one student guesses \"only required\" but isn't sure. No staff reply.",meta:"Diego Smith · Nov 10"},
+   {ref:"t:2826",cat:"Class Discussion",title:"Quiz 4: do the optional readings count?",score:.89,badge:"no",sum:"Same question asked again this week, specifically for Quiz 4. No replies yet.",meta:"Selma Smith · 2d · 0 replies"}
+  ],
+  follow:["scope","missed"]
+ },
+ curve: {
+  steps:[["This is a <b>grading rule</b> question, so I checked official course pages first", 280],
+         ["Syllabus, Quiz 4 page and Schedule: <b>none of them mention curving</b>", 300],
+         ["Staff replies: <b>none</b>. Found 1 student thread with a guess", 280]],
+  meta:"Checked 3 course pages and 1,164 threads · 4.1 s",
+  answer(){
+    return `<div class="origin warn">⚠<span><b>No official answer.</b> No course page or staff reply says whether Quiz 4 will be curved, so I won't guess.</span></div>
+    <div class="unverified"><div class="uh">UNVERIFIED · STUDENTS ONLY</div><p>One classmate wrote that someone who took the course last year saw no curve, "but I'm not sure that's still true." ${cite(1,"t:2830:curve1",byId[2830].title+" · #2830")}</p></div>
+    <p>The Syllabus covers quiz rules but says nothing about curving ${cite(2,"d:syllabus:syl2","Syllabus: Quizzes")}.</p>
+    <div class="cl-act"><button data-act="draft" data-q="Will Quiz 4 be curved?" data-cat="Quiz">Ask staff (draft a question)</button></div>`;
+  },
+  sources:[
+   {ref:"t:2830:curve1",cat:"Class Discussion",title:byId[2830].title,score:.84,badge:"no",sum:"A student asks whether quizzes are curved; a classmate guesses there was no curve last year but isn't sure. No staff reply.",meta:"Wendell Smith · 3d · 2 replies"},
+   {ref:"d:syllabus:syl2",course:true,title:"Syllabus: Quizzes",score:.62,badge:"course",sum:"Quiz rules: required readings only, open notes, one attempt. Nothing about curving.",meta:"Canvas › Syllabus · updated Aug 17"}
+  ],
+  follow:["scope","materials"]
+ },
+ missed: {
+  steps:[["Your last visit was <b>Fri, Nov 20, 6:00 pm</b>", 200],
+         ["Read the <b>18 new posts and replies</b> since then in categories you follow", 300],
+         ["Summarised them: things for you first, then answers, then requests <span class=\"tech\">summarisation</span>", 280]],
+  meta:"Summarised 18 new posts · 3.7 s",
+  answer(){ return `<div class="ranges">${RANGES.map((r,i)=>`<button data-range="${i}" class="${i===0?"on":""}">${r.l}</button>`).join("")}</div><div class="digest">${digestHTML(0)}</div>
+    <div class="dg-foot"><button data-act="markread">Mark these as read</button><span style="color:#999">·</span><button data-act="daily">${state.daily?"✓ Daily summary on · Turn off":"Get this every morning"}</button></div>`; },
+  sources:[],
+  follow:["cluster","materials"]
+ }
+};
+/* Quiz 4 closes Sun Dec 6, 11:59 pm AoE (UTC-12) = Mon Dec 7, 11:59 UTC. Shown in the viewer's real time zone. */
+const Q4_CLOSE = new Date(Date.UTC(2026,11,7,11,59));
+function tzFmt(zone){ const o={weekday:"short",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",timeZoneName:"short"}; if(zone) o.timeZone=zone; try{ return new Intl.DateTimeFormat("en-US",o).format(Q4_CLOSE); }catch(e){ return Q4_CLOSE.toUTCString(); } }
+function tzHTML(which){
+  const local = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){ return "your time zone"; } })();
+  const zones = {local:[null,"your time zone ("+local+")"], et:["America/New_York","Atlanta / Eastern time"], pt:["America/Los_Angeles","Pacific time"]};
+  const [z,l] = zones[which];
+  return `<span style="color:#666;font-size:11px">= ${tzFmt(z)}, ${esc(l)}</span> <span class="tzchips">${["local","et","pt"].map(k=>`<button data-tz="${k}" class="${k===which?"on":""}">${k==="local"?"Mine":k.toUpperCase()}</button>`).join("")}</span>`;
+}
+const RANGES = [{l:"Since last visit",h:26},{l:"Last 3 days",h:72},{l:"Last 7 days",h:170}];
+const DIGEST = [
+ {h:16, g:"For you", e:"📚", s:"ok", ref:"t:2847:sg2", html:`<b>Anika Smith shared a Quiz 4 study pack</b> ("Sharing my notes before the last quiz"): summaries, 20 practice questions and a glossary. The instructor checked and endorsed it.`},
+ {h:2,  g:"For you", e:"✅", s:"no", ref:"t:2850:pdf1", html:`<b>Solved:</b> figures jumping pages when exporting Word to PDF. Fix: set images to "In line with text" and use Export, not Print to PDF.`},
+ {h:20, g:"Answered", e:"💬", s:"staff", ref:"t:2842:app1", html:`<b>Staff answer:</b> appendices don't count toward the team-report page limit, but graders don't have to read them.`},
+ {h:24, g:"Answered", e:"😄", s:"spost", ref:"t:2849:fh13", html:`<b>Friday Humor, Week 13</b> is up with 6 replies (a parking-garage kiosk, a backwards thermostat…).`},
+ {h:22, g:"Classmates need help", e:"🙋", s:"post", ref:"t:2851", html:`<b>Team Lantern needs testers</b> for a 15-min prototype session. Two more teams posted 5-min surveys.`},
+ {h:48, g:"Unanswered", e:"❓", s:"none", ref:"t:2826", html:`<b>"Quiz 4: do the optional readings count?"</b> has no reply yet. It's a duplicate of a question staff already answered.`},
+ {h:48, g:"Answered", e:"🤖", s:"spost", ref:"t:2845", html:`<b>Thursday Applications</b> asks where AI assistants made a task easier or harder.`},
+ {h:72, g:"For you", e:"📝", s:"spost", ref:"t:2836", html:`<b>Marcus Smith posted sample peer-review comments</b> showing what useful feedback looks like.`},
+ {h:144,g:"For you", e:"📌", s:"spost", ref:"t:2801", html:`<b>Quiz 4 Megathread</b> opened. Staff point to the Quiz 4 page for scope and timing.`}
+];
+DIGEST.filter(d=>d.h<=26).forEach(d=>{ const id=+d.ref.split(":")[1]; if(!MISSED_IDS.includes(id)) MISSED_IDS.push(id); });
+const GORDER = ["For you","Answered","Classmates need help","Unanswered"];
+function digestHTML(ri){
+  const max = RANGES[ri].h, items = DIGEST.filter(d=>d.h<=max);
+  const ago = h => h<24 ? h+"h" : Math.round(h/24)+"d";
+  return `<p style="margin:0 0 4px"><b>${items.length} updates</b> worth your time ${ri===0?"since Friday evening":"in this period"}. Each one links to its thread.</p>` +
+    GORDER.map(g=>{const xs=items.filter(d=>d.g===g); if(!xs.length) return ""; return `<div class="dg-h">${g.toUpperCase()}</div>`+xs.map(d=>`<button class="dg${state.read.has(+d.ref.split(":")[1])?" readd":""}" data-open="${d.ref}"><span class="e">${d.e}</span><span class="x">${d.html}<span class="dgs">${statusTag(d.s)}</span></span><span class="t">${ago(d.h)}<span class="go2">Open ›</span></span></button>`).join("");}).join("");
+}
+function clusterSVG(){
+  const node=(x,y,w,ref,fill,stroke,l1,l2)=>`<g ${ref?`data-open="${ref}"`:""}><rect x="${x-w/2}" y="${y-17}" width="${w}" height="34" rx="7" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/><text x="${x}" y="${y-3}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#222">${l1}</text><text x="${x}" y="${y+10}" text-anchor="middle" font-size="9" fill="#666">${l2}</text></g>`;
+  const line=(x,y,dash)=>`<line x1="190" y1="88" x2="${x}" y2="${y}" stroke="#c9b8e6" stroke-width="1.5" ${dash?'stroke-dasharray="4 3"':""}/>`;
+  return `<svg viewBox="0 0 380 176" role="img" aria-label="Cluster of three threads and the syllabus around one question">
+    ${line(78,30)}${line(302,30,1)}${line(78,146)}${line(302,146)}
+    ${node(78,30,138,"t:2783:opt1","#e7f6ec","#9fd5b2","#2783 ✓ Staff answer","Lectures · Nov 6")}
+    ${node(302,30,138,"d:syllabus:syl1","#eef5ff","#b9d1f5","Syllabus › Quizzes","official course page")}
+    ${node(78,146,138,"t:2799","#fff4e0","#f0cf95","#2799 Students only","Quiz · Nov 10")}
+    ${node(302,146,138,"t:2826","#fdecec","#f2b8b5","#2826 Unanswered","Class Discussion · 2d")}
+    <g><rect x="112" y="68" width="156" height="40" rx="20" fill="#50288c"/><text x="190" y="85" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">"Are optional readings</text><text x="190" y="99" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">on the quiz?"</text></g>
+  </svg>`;
+}
+$("#chatScroll").addEventListener("click", e => {
+  const r = e.target.closest("[data-range]");
+  if(r){ const box=r.closest(".msg-a"); box.querySelectorAll("[data-range]").forEach(b=>b.classList.toggle("on",b===r)); box.querySelector(".digest").innerHTML=digestHTML(+r.dataset.range);
+    const mb = box.querySelector('[data-act="unmark"]'); if(mb){ mb.dataset.act="markread"; mb.textContent="Mark these as read"; } return; }
+  const j = e.target.closest(".jump"); if(j){ e.preventDefault(); const sg=SUGG.find(x=>x.k===j.dataset.k); ask(sg.q, sg.k); return; }
+  const a = e.target.closest("[data-act]"); if(!a) return;
+  const act = a.dataset.act, box = a.closest(".msg-a");
+  log("action",{act});
+  if(act==="markread"){
+    const on = box.querySelector("[data-range].on"), ri = on ? +on.dataset.range : 0;
+    const ids = [...new Set(DIGEST.filter(d=>d.h<=RANGES[ri].h).map(d=>+d.ref.split(":")[1]))];
+    state.marked = ids.filter(id=>!state.read.has(id)); state.marked.forEach(id=>state.read.add(id));
+    box.querySelectorAll(".dg").forEach(x=>x.classList.add("readd"));
+    a.dataset.act = "unmark"; a.textContent = `✓ Marked ${state.marked.length} as read · Undo`;
+    renderList(); updateCounts(); doneTask("missed"); return;
+  }
+  if(act==="unmark"){
+    (state.marked||[]).forEach(id=>state.read.delete(id)); state.marked = [];
+    box.querySelectorAll(".dg").forEach(x=>x.classList.toggle("readd", state.read.has(+x.dataset.open.split(":")[1])));
+    a.dataset.act = "markread"; a.textContent = "Mark these as read"; renderList(); updateCounts(); return;
+  }
+  if(act==="daily"){ state.daily = !state.daily; a.textContent = state.daily ? "✓ Daily summary on · Turn off" : "Get this every morning";
+    toast(state.daily ? "Daily summary on. It will also show on the Ask Ed home screen." : "Daily summary turned off."); return; }
+  if(act==="link"){
+    state.linked = !state.linked;
+    a.textContent = state.linked ? "✓ Linked to the staff answer · Undo" : "Link to the staff answer";
+    box.querySelectorAll('.crow2[data-cl="2799"], .crow2[data-cl="2826"]').forEach(row=>{ const lk=row.querySelector(".lk"); if(state.linked && !lk) row.querySelector(".stag").insertAdjacentHTML("afterend",'<span class="stag course lk">Linked</span>'); if(!state.linked && lk) lk.remove(); });
+    toast(state.linked ? "Linked: #2799 and #2826 now show the staff answer from #2783. Open one to see it." : "Link removed.");
+    if(state.open===2799 || state.open===2826) openThread(state.open); return;
+  }
+  if(act==="notify"){
+    state.notified = !state.notified;
+    a.innerHTML = state.notified ? "✓ Selma &amp; Diego pointed to it · Undo" : "Point the other askers to it";
+    toast(state.notified ? "Selma Smith (#2826) and Diego Smith (#2799) were pointed to the staff answer." : "Undone.");
+    if(state.open===2799 || state.open===2826) openThread(state.open); return;
+  }
+  if(act==="draft"){ const q = a.dataset.q||""; if(/curv/i.test(q)) doneTask("curve"); openCompose({title:q, cat:a.dataset.cat}); return; }
+});
+
+/* Routing typed questions to the scripted answers (with a small alias/typo table). Other quiz numbers are not scripted. */
+function normQ(text){ return text.toLowerCase().replace(/[’`]/g,"'").replace(/quizz+/g,"quiz").replace(/qiuz|quzi/g,"quiz").replace(/\bq\s?(\d)\b/g,"quiz $1").replace(/\bquiz(\d)\b/g,"quiz $1").replace(/\bweeks\b/g,"week").replace(/\s+/g," ").trim(); }
+function route(text){
+  const t = normQ(text);
+  const qn = t.match(/\bquiz (\d)\b/); if(qn && qn[1]!=="4") return null;
+  if(/curve|curved|curving|scaled|scaling/.test(t)) return "curve";
+  if(/miss|catch ?up|since (my )?last|what('?s| is) new|digest|updates/.test(t)) return "missed";
+  if(/optional|extra reading|already asked|duplicate|same question|similar|related questions?|cluster/.test(t)) return "cluster";
+  if(/scope|cover|syllab|topics?|what('?s| is) on|format|when is|deadline|readings? (for|on)|due|how many questions|window/.test(t) && /quiz|exam|test/.test(t)) return "scope";
+  if(/material|notes?|study|flash ?cards?|anki|guide|practice|resources?|shared|summar|deck|glossary/.test(t)) return "materials";
+  if(/week|weekly|discussion thread|this week|current|reflection|humor|humour|media|readings thread/.test(t)) return "weekly";
+  if(/^quiz 4\??$/.test(t)) return "clarify";
+  if(/scope|cover|quiz 4/.test(t)) return "scope";
+  return null;
+}
+const NEIGH = {weekly:["missed"], materials:["scope","cluster"], scope:["materials","cluster"], cluster:["scope"], missed:["weekly"], curve:["scope"]};
+
+// Slows the "Searching…" steps so participants can read them (1 = original speed). "Show answer now" skips the wait.
+const STEP_PACE = 3.9;
+function wait(ms){ return new Promise(res => { if(state.fast) return res(); const t = setTimeout(res, ms); state.wake = () => { clearTimeout(t); res(); }; }); }
+// Stop an answer that is still "searching" (Stop button, navigating away, reset or asking something else).
+function cancelRun(){
+  state.gen++;
+  if(state.wake){ const w = state.wake; state.wake = null; w(); }
+  if(!state.busy) return;
+  state.busy = false;
+  document.querySelectorAll("#chatScroll .skip").forEach(x=>x.remove());
+  document.querySelectorAll("#chatScroll .steps").forEach(st=>{
+    if(st.querySelector(".steps-t .spin")){ st.classList.remove("open"); st.querySelector(".steps-t").innerHTML = `<span>Stopped</span><span class="sp"></span>${ICON.chev}`; st.querySelectorAll("li:not(.done)").forEach(li=>li.remove()); }
+  });
+  updateSend();
+}
+function chipsHTML(keys){ return keys.map(k=>{ const s=SUGG.find(x=>x.k===k); return `<button data-k="${k}">${esc(s.q)}</button>`; }).join(""); }
+async function ask(text, key){
+  if(!text) return;
+  cancelRun(); const gen = state.gen;
+  const typed = !key;
+  state.busy = true; state.fast = false; updateSend();
+  key = key || route(text);
+  state.lastKey = key;
+  log("ask",{q:text, routed:key||"none", typed});
+  const sc = $("#chatScroll");
+  if(state.view==="home"){ sc.innerHTML = ""; state.view = "chat"; state.cur = null; }
+  sc.insertAdjacentHTML("beforeend", `<div class="msg-u"><div>${esc(text)}</div></div>`);
+  setHeader();
+  const m = document.createElement("div"); m.className = "msg-a";
+  m.innerHTML = `<div class="a-head"><span class="lg">${ICON.spark}</span>Ask Ed<span class="sp"></span></div>`;
+  sc.appendChild(m); sc.scrollTop = sc.scrollHeight;
+  const finish = () => { sc.scrollTop = sc.scrollHeight; state.busy = false; updateSend(); };
+
+  if(key==="clarify"){
+    await wait(500); if(gen!==state.gen) return;
+    m.insertAdjacentHTML("beforeend", `<div class="ans fade"><p>“${esc(text)}” could mean a few things. Which one do you want?</p></div><div class="follow">${chipsHTML(["scope","materials","cluster"])}</div>`);
+    finish(); return;
+  }
+  if(!key){
+    await wait(600); if(gen!==state.gen) return;
+    const hits = matchThreads(text).slice(0,3);
+    log("fallback",{q:text, ids:hits.map(h=>h.t.id)});
+    m.insertAdjacentHTML("beforeend", `<div class="ans fade">${hits.length
+        ? `<p>I can't answer this reliably, and I won't guess. <b>These threads look closest:</b></p>${hits.map(({t})=>{ const r=itemStatus(t); return `<button class="crow2" data-open="t:${t.id}">${statusTag(r.k)}<span class="x">${esc(t.title)}</span><span class="m">${esc(t.cat)} · ${esc(t.age)}</span></button>`; }).join("")}`
+        : `<p><b>No staff-confirmed answer found</b>, and no thread looks close enough. I won't guess.</p>`}
+      <div class="cl-act"><button data-act="draft" data-q="${esc(text)}">Draft a new question</button></div></div>
+      ${STUDY ? `<div class="hints">Tip: name the quiz, assignment or topic you mean.</div>` : `<div class="follow">${chipsHTML(SUGG.filter(s=>s.k!=="curve").map(s=>s.k))}</div>`}`);
+    finish(); return;
+  }
+  const S = SCRIPTS[key];
+  m.querySelector(".a-head").insertAdjacentHTML("beforeend", `<button class="skip" data-skip>Show answer now ›</button>`);
+  const steps = document.createElement("div"); steps.className = "steps open";
+  steps.innerHTML = `<button class="steps-t"><span class="spin"></span><span>Searching…</span><span class="sp"></span>${ICON.chev}</button><ul></ul>`;
+  m.appendChild(steps);
+  const ul = steps.querySelector("ul");
+  for(const [label, ms] of S.steps){
+    const li = document.createElement("li"); li.innerHTML = `<span class="st"><span class="spin"></span></span><span>${label}</span>`;
+    ul.appendChild(li); sc.scrollTop = sc.scrollHeight;
+    await wait(ms * STEP_PACE); if(gen!==state.gen) return;
+    li.classList.add("done"); li.querySelector(".st").innerHTML = ICON.check;
+  }
+  await wait(700); if(gen!==state.gen) return; // let the finished list be read before it collapses
+  const sk = m.querySelector(".skip"); if(sk) sk.remove();
+  steps.classList.remove("open");
+  steps.querySelector(".steps-t").innerHTML = `<span style="color:var(--green)">${ICON.check}</span><span>${S.meta}</span><span class="sp"></span>${ICON.chev}`;
+
+  const sg = SUGG.find(x=>x.k===key);
+  const interp = typed && sg ? `<div class="interp">Showing answer for: <b>${esc(sg.q)}</b>${(NEIGH[key]||[]).length?` · Did you mean ${chipsHTML(NEIGH[key])}`:""}</div>` : "";
+  const ans = document.createElement("div"); ans.className = "ans fade"; ans.innerHTML = interp + S.answer();
+  m.appendChild(ans);
+  const cards = S.sources.map((s,i)=>srcCard(i+1,s)).join("");
+  const src = document.createElement("div"); src.className = "fade"; src.style.animationDelay = ".15s";
+  src.innerHTML = (S.sources.length?`<div class="src-h">SOURCES · ${S.sources.length}<span class="sp"></span>${S.sources.length>1?`<span style="font-weight:400;letter-spacing:0;color:#999">ranked by relevance</span>`:""}</div>
+    ${S.method?`<div class="method">${ICON.spark}<span>Ranked with embeddings and retrieval-augmented generation (RAG). Summaries are AI-generated; the approval badge comes from course staff.</span></div>`:""}
+    ${S.collapse?`<details class="srcd"><summary>Show source details (${S.sources.length})</summary>${cards}</details>`:cards}`:"") + `
+    <div class="fb"><button class="ib" data-fb="up" title="Helpful" aria-label="Helpful">${ICON.up}</button><button class="ib" data-fb="down" title="Not helpful" aria-label="Not helpful">${ICON.down}</button><button class="ib" data-copy title="Copy answer and sources" aria-label="Copy answer and sources">${ICON.copy}</button></div>
+    ${STUDY?"":`<div class="follow">${chipsHTML(S.follow)}</div>`}`;
+  m.appendChild(src);
+  // Nudge: the first citation and source card pulse once; a one-time tip explains the numbers.
+  const c1 = ans.querySelector(".cite"); if(c1) c1.classList.add("nudge");
+  const s1 = src.querySelector(".src"); if(s1 && !S.collapse) s1.classList.add("nudge");
+  if(c1 && !state.nudged){ state.nudged = true; ans.insertAdjacentHTML("afterend", `<div class="nudge-tip">Tip: click a number like <span class="cite">1</span> to open the exact passage it comes from.</div>`); }
+  sc.scrollTop = sc.scrollHeight;
+  // keep the user's message + start of the answer in view
+  setTimeout(()=>{ const pv = m.previousElementSibling; if(m.isConnected && pv) pv.scrollIntoView({block:"start",behavior:"smooth"}); }, 60);
+  if(S.after) S.after();
+  state.busy = false; updateSend();
+}
+
+/* composer */
+const ci = $("#ci");
+const SEND_ICON = $("#send").innerHTML;
+const STOP_ICON = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>`;
+function updateSend(){
+  const b = $("#send");
+  b.classList.toggle("stop", state.busy);
+  b.innerHTML = state.busy ? STOP_ICON : SEND_ICON;
+  b.title = state.busy ? "Stop" : "Send"; b.setAttribute("aria-label", b.title);
+  b.disabled = !state.busy && !ci.value.trim();
+}
+ci.addEventListener("input", () => { updateSend(); clearTimeout(dupT); dupT = setTimeout(showDups, 220); });
+ci.addEventListener("keydown", e => {
+  if(e.key==="Escape"){ hideDups(); return; }
+  const items = [...document.querySelectorAll("#dup .dupi")];
+  if((e.key==="ArrowDown" || e.key==="ArrowUp") && items.length){
+    e.preventDefault();
+    state.dupIdx = e.key==="ArrowDown" ? Math.min(items.length-1, state.dupIdx+1) : Math.max(-1, state.dupIdx-1);
+    items.forEach((x,i)=>x.classList.toggle("kb", i===state.dupIdx));
+    if(state.dupIdx>=0) items[state.dupIdx].scrollIntoView({block:"nearest"});
+    return;
+  }
+  if(e.key==="Enter" && !e.shiftKey){
+    e.preventDefault();
+    if(!(e.metaKey||e.ctrlKey) && state.dupIdx>=0 && items[state.dupIdx]){ items[state.dupIdx].click(); return; }
+    send();
+  }
+});
+/* Duplicate suggestions: real client-side matching over the sample threads (stands in for embedding search).
+   Handles assignment numbers ("Quiz 4"), a few course synonyms and one-letter typos. */
+let dupT;
+const STOP = new Set("a an the is are was were be been do does did on in at of for to and or but if it its this that these those i me my we our you your can could should would will any anyone someone has have had about with from as by what whats when where which who how why there their they them just still also".split(" "));
+const SYN = {guide:"notes", pack:"notes", summaries:"notes", summary:"notes", anki:"flashcards", deck:"flashcards", flashcard:"flashcards", cards:"flashcards", extra:"optional", due:"deadline", appendices:"appendix", appendixes:"appendix", curved:"curve", curving:"curve"};
+const stem = w => w.replace(/'s$/,"").replace(/(ing|ed|es|s)$/,"");
+const rawToks = str => (str.toLowerCase().replace(/<[^>]+>/g," ").replace(/\bquizz\b/g,"quiz").replace(/\b(quiz|unit|lesson)\s+(\d)/g,"$1$2").replace(/\bq(\d)\b/g,"quiz$1").match(/[a-z0-9]+/g)||[]);
+const toks = str => rawToks(str).map(w=>SYN[w]||w).filter(w=>(w.length>2 || /[a-z]\d/.test(w)) && !STOP.has(w)).map(stem);
+const plain = h => h.replace(/<span class="citedby">.*?<\/span>/g,"").replace(/<button[^>]*>.*?<\/button>/g,"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+function ed1(a,b){ if(Math.abs(a.length-b.length)>1) return false; let i=0,j=0,d=0; while(i<a.length && j<b.length){ if(a[i]===b[j]){ i++; j++; continue; } if(++d>1) return false; if(a.length>b.length) i++; else if(b.length>a.length) j++; else { i++; j++; } } return d+(a.length-i)+(b.length-j) <= 1; }
+let VOCAB = null;
+function vocab(){ if(!VOCAB){ VOCAB = new Set(); THREADS.forEach(t=>toks(t.title+" "+t.body+" "+(t.comments||[]).map(c=>c.text).join(" ")).forEach(w=>VOCAB.add(w))); } return VOCAB; }
+function fixTypos(ws){ const V = vocab(); return ws.map(w=>{ if(V.has(w) || w.length<5) return w; for(const v of V){ if(v[0]===w[0] && ed1(w,v)) return v; } return w; }); }
+function matchThreads(q){
+  const qt = [...new Set(fixTypos(toks(q)))]; if(!qt.length) return [];
+  const need = Math.min(3, 2*qt.length);
+  return THREADS.map(t=>{
+    const tt = new Set(toks(t.title)), bt = new Set(toks(t.body+" "+(t.comments||[]).map(c=>c.text).join(" ")));
+    let sc = 0; qt.forEach(w=>{ if(tt.has(w)) sc+=2; else if(bt.has(w)) sc+=1; });
+    return {t, sc, qt};
+  }).filter(x=>x.sc>=need).sort((a,b)=>b.sc-a.sc);
+}
+function bestReply(t){
+  const all = []; (t.comments||[]).forEach(c=>{ all.push(c); (c.kids||[]).forEach(k=>all.push(k)); });
+  const pick = all.find(c=>c.endorsed) || all.find(c=>c.by.staff) || all[0];
+  if(!pick) return {k:"none", cls:"none", tag:"Unanswered", text:"No replies yet."};
+  const k = pick.endorsed && !pick.by.staff ? "ok" : pick.by.staff ? "staff" : "no";
+  return {k, cls:k==="no"?"student":"staff", tag:STATUS[k][1], text: (pick.by.name.split(" ")[0])+": "+plain(pick.text)};
+}
+function dupRowsHTML(scored, attr){
+  const qt = scored.length ? scored[0].qt : [], maxS = Math.max(2, qt.length*2);
+  const words = qt.filter(w=>!/\d/.test(w));
+  const hl = x => { let h = esc(x); words.forEach(w=>{ h = h.replace(new RegExp("\\b("+w+"\\w*)","gi"),"<mark>$1</mark>"); }); return h; };
+  return scored.map(({t,sc})=>{ const r = itemStatus(t);
+    const txt = r.text.length>130 ? r.text.slice(0,128)+"…" : r.text;
+    return `<button class="dupi" ${attr}="${t.id}"><div class="a">${statusTag(r.k)}<span class="x">${hl(t.title)}</span><span class="sim">${Math.min(99,Math.round(55+45*sc/maxS))}% similar</span></div><div class="b">${hl(txt)}</div></button>`; }).join("");
+}
+function showDups(){
+  const q = ci.value.trim(), box = $("#dup");
+  const qt = [...new Set(fixTypos(toks(q)))];
+  if(state.busy || !(qt.length>=2 || qt.some(w=>/\d/.test(w)))){ hideDups(); return; }
+  const scored = matchThreads(q).slice(0,3);
+  if(!scored.length){ hideDups(); return; }
+  state.dupIdx = -1;
+  box.innerHTML = `<div class="dup-h">${ICON.cluster} SIMILAR QUESTIONS ALREADY ON ED · ${scored.length}<span class="sp"></span><button data-dupx aria-label="Hide suggestions">×</button></div>` +
+    dupRowsHTML(scored, "data-dup") +
+    `<div class="dup-f"><b>↑/↓</b> to pick one, <b>Enter</b> to open it. With nothing picked, <b>Enter</b> (or <b>⌘/Ctrl+Enter</b>) asks Ed.</div>`;
+  box.hidden = false;
+  log("dup_shown",{where:"chat", ids:scored.map(x=>x.t.id)});
+}
+function hideDups(){ const b=$("#dup"); b.hidden = true; b.innerHTML = ""; state.dupIdx = -1; }
+$("#dup").addEventListener("click", e => {
+  if(e.target.closest("[data-dupx]")){ hideDups(); return; }
+  const d = e.target.closest("[data-dup]"); if(!d) return;
+  const id = +d.dataset.dup;
+  state.retDraft = ci.value;
+  hideDups();
+  openSource("t:"+id+(id===2783?":opt1":""), null, "dup");
+});
+$("#send").addEventListener("click", () => { if(state.busy){ log("stop",{}); cancelRun(); } else send(); });
+function send(){ const v = ci.value.trim(); if(!v) return; ci.value=""; hideDups(); updateSend(); ask(v); }
+$("#newChat").addEventListener("click", () => { goHome(); ci.focus(); });
+$("#chatBack").addEventListener("click", goHome);
+$("#chatHome").addEventListener("click", () => { goHome(); ci.focus(); });
+
+/* panel open/close + resize */
+function openChat(){ setTimeout(placeTasks,0); $("#app").classList.remove("chat-off"); $("#askToggle").classList.add("on"); $("#askToggle").setAttribute("aria-pressed","true"); }
+function toggleChat(){ const off = $("#app").classList.toggle("chat-off"); setTimeout(placeTasks,0); $("#askToggle").classList.toggle("on",!off); $("#askToggle").setAttribute("aria-pressed",String(!off)); if(!off) ci.focus(); }
+$("#askToggle").addEventListener("click", toggleChat);
+$("#closeChat").addEventListener("click", toggleChat);
+$("#rail").addEventListener("click", e => {
+  const b = e.target.closest("[data-rail]"); if(!b) return;
+  const k = b.dataset.rail;
+  openChat();
+  if(k==="new"){ goHome(); ci.focus(); }
+  else if(k==="missed" || k==="cluster"){ goHome(); const sg = SUGG.find(x=>x.k===k); ask(sg.q, k); }
+  else ci.focus();
+});
+document.addEventListener("keydown", e => { if(!ASK_OFF && (e.metaKey||e.ctrlKey) && (e.key==="i"||e.key==="I")){ e.preventDefault(); if($("#app").classList.contains("chat-off")) toggleChat(); else ci.focus(); } });
+(function(){
+  const r = $("#resizer"); let x0, w0;
+  r.addEventListener("mousedown", e => { x0=e.clientX; w0=$("#chat").getBoundingClientRect().width; r.classList.add("drag"); document.body.style.userSelect="none";
+    const mv = ev => { const w=Math.max(340, Math.min(720, w0 + (x0-ev.clientX))); document.documentElement.style.setProperty("--chat-w", w+"px"); };
+    const up = () => { r.classList.remove("drag"); document.body.style.userSelect=""; removeEventListener("mousemove",mv); removeEventListener("mouseup",up); };
+    addEventListener("mousemove",mv); addEventListener("mouseup",up); });
+})();
+
+/* tasks: each one ticks when the participant opens the source that answers it, by any route (with or without Ask Ed) */
+const TASK_N = document.querySelectorAll("#taskList li").length;
+function doneTask(k){
+  if(state.tasks.has(k) || !$(`#taskList li[data-t="${k}"]`)) return; state.tasks.add(k);
+  log("task_done",{task:k});
+  const li = $(`#taskList li[data-t="${k}"]`); if(li) li.classList.add("done");
+  $("#taskCt").textContent = state.tasks.size+"/"+TASK_N;
+  if(state.tasks.size===TASK_N) showResult();
+}
+/* Result line participants paste into the survey: "4 of 5 done, 4:12" (time since load or last Reset) */
+function resultText(){
+  const sec = Math.round((Date.now()-T0)/1000);
+  return `${state.tasks.size} of ${TASK_N} done, ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;
+}
+function showResult(){
+  const r = resultText(); state.result = r;
+  $("#taskResTxt").textContent = r; $("#taskRes").hidden = false; $("#tasks").classList.remove("min");
+  log("finished",{result:r});
+}
+function checkTasks(kind, id){
+  if(kind==="t"){
+    if([2849,2845,2838,2829,2820].includes(id)) doneTask("weekly");
+    if(id===2847 || id===2812) doneTask("materials");
+    if(id===2783 || id===2799 || id===2826) doneTask("cluster");
+    if(id===2830) doneTask("curve");
+  }
+  if(kind==="d"){
+    if(id==="quiz4" || (id==="syllabus" && state.lastKey==="scope")) doneTask("scope");
+    if(state.lastKey==="curve") doneTask("curve");
+  }
+}
+/* The task list lives in the sidebar; when the sidebar is hidden (narrow windows) it floats bottom-left. */
+function placeTasks(){
+  const side = $(".side"), tasks = $("#tasks");
+  const hidden = getComputedStyle(side).display==="none";
+  if(hidden && !tasks.classList.contains("float")){ document.body.appendChild(tasks); tasks.classList.add("float"); if(window.innerWidth<=760) tasks.classList.add("min"); }
+  else if(!hidden && tasks.classList.contains("float")){ side.insertBefore(tasks, $(".online")); tasks.classList.remove("float"); }
+}
+addEventListener("resize", placeTasks);
+$("#tasksToggle").addEventListener("click", () => $("#tasks").classList.toggle("min"));
+$("#hideTasks").addEventListener("click", () => $("#tasks").classList.add("min"));
+$("#finishTasks").addEventListener("click", showResult);
+$("#copyRes").addEventListener("click", () => {
+  const t = state.result || resultText();
+  const ok = () => toast("Copied: "+t), fb = () => { const x=document.createElement("textarea"); x.value=t; document.body.appendChild(x); x.select(); try{document.execCommand("copy");}catch(e){} x.remove(); ok(); };
+  (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(t).then(ok, fb) : fb();
+});
+$("#dlLog").addEventListener("click", () => {
+  if(!state.pid){ const code = prompt("Participant code for this session (e.g. P03):", ""); if(code===null) return; state.pid = code.trim(); }
+  const data = {participant: state.pid || "anonymous", started: new Date(T0).toISOString(), saved: new Date().toISOString(),
+    flags: {study:STUDY, panelClosed:PANEL_CLOSED, askOff:ASK_OFF}, tasksDone: [...state.tasks], result: state.result || resultText(), events: LOG};
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:"application/json"}));
+  a.download = `ask-ed-session-${(state.pid||"anonymous").replace(/[^\w-]+/g,"_")}.json`;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  toast(`Session log saved (${LOG.length} events).`);
+});
+$("#reset").addEventListener("click", () => {
+  state.tasks.clear(); document.querySelectorAll("#taskList li").forEach(l=>l.classList.remove("done")); $("#taskCt").textContent="0/"+TASK_N; $("#taskRes").hidden=true; state.result=null; hideDups();
+  cancelRun();
+  Object.assign(state, {cat:null, q:"", showMore:false, open:null, filter:null, ret:null, retDraft:null, paneRef:null, linked:false, notified:false, daily:false,
+    marked:[], draft:null, nudged:false, pseq:null, lastKey:null, pid:"", history:[], view:"home", cur:null});
+  [state.read, state.star, state.watch, state.liked].forEach(x=>x.clear());
+  $("#q").value=""; LOG = []; T0 = Date.now();
+  renderCats(); renderList(); emptyPane(); welcome(); setHeader(); updateCounts();
+  if(!ASK_OFF){ if(PANEL_CLOSED){ if(!$("#app").classList.contains("chat-off")) toggleChat(); } else openChat(); }
+  document.documentElement.style.removeProperty("--chat-w");
+  toast("Prototype reset. The session log was cleared too.");
+});
+$("#newThread").addEventListener("click", () => { log("new_thread",{}); openCompose({}); });
+/* Ed controls that are outside this prototype still answer, so nothing looks broken. */
+const INERT = [
+  ['.hicon[title="Discussion"]', "You're already in Discussion."],
+  ['.hicon[title="Lessons"]', "Lessons holds the course videos. It isn't part of this prototype."],
+  ['.hicon[title="Home"]', "Home lists all your Ed courses. It isn't part of this prototype."],
+  ['.hicon[title="Notifications"]', "Notifications aren't part of this prototype."],
+  ['.avatar-me', "Your profile isn't part of this prototype."],
+  ['.course:not(.on)', "Other courses aren't part of this prototype."],
+  ['.course.on', "You're in CS6750."],
+  ['.online', "79 classmates are on Ed right now."],
+  ['.sortrow', "Sorting comments isn't part of this prototype."],
+  ['.addc', "Commenting is turned off in this prototype."],
+  ['.ca span', "Replying is turned off in this prototype."],
+  ['.actions span', "Commenting is turned off in this prototype."],
+  ['.youranswer .post', "Posting answers is turned off in this prototype."],
+  ['.editor', "Writing answers is turned off in this prototype."],
+  ['.att', "Attachments are placeholders in this prototype."]
+];
+document.addEventListener("click", e => {
+  for(const [sel, msg] of INERT){ if(e.target.closest(sel)){ toast(msg); log("inert",{el:sel}); return; } }
+});
+
+/* init */
+if(ASK_OFF) document.body.classList.add("ask-off");
+renderCats(); renderList(); emptyPane(); welcome(); updateCounts(); updateSend(); placeTasks();
+if(PANEL_CLOSED && !ASK_OFF) toggleChat();
+log("start",{flags:{study:STUDY, panelClosed:PANEL_CLOSED, askOff:ASK_OFF}, width:innerWidth});
+})();
+</script>
+</body>
+</html>
